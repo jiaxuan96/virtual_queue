@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inset_shadow/flutter_inset_shadow.dart' as inset;
+import 'package:virtual_queue/services/auth_service.dart';
+import 'package:virtual_queue/pages/home_page.dart';
 
 class LoginPage extends StatefulWidget{
   const LoginPage({super.key});
@@ -9,6 +11,30 @@ class LoginPage extends StatefulWidget{
 }
 
 class _LoginPageState  extends State<LoginPage>{
+
+  final emailController = TextEditingController();
+  final passwordController = TextEditingController();
+
+  final auth = AuthService();
+
+  Future<void> login() async {
+    final user = await auth.login(
+        emailController.text.trim(),
+        passwordController.text.trim(),
+    );
+
+    if (user != null) {
+      Navigator.pushReplacement(
+          context,
+          MaterialPageRoute(builder: (context) => const HomePage()),
+      );
+    } else{
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("Login failed")),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -93,8 +119,13 @@ class _LoginPageState  extends State<LoginPage>{
                         ],
                       ),
                       child: TextField(
+                        controller: emailController,
+                        keyboardType: TextInputType.emailAddress,
                         decoration: InputDecoration(
-                          hintText: 'example@gamil.com',
+                          hintText: 'example@gmail.com',
+                          hintStyle: TextStyle(
+                            color: Colors.grey,
+                          ),
                           filled: false,
                           fillColor: Color(0xFFFFFFFF),
                           border: OutlineInputBorder(
@@ -126,8 +157,13 @@ class _LoginPageState  extends State<LoginPage>{
                         ]
                       ),
                       child: TextField(
+                        controller: passwordController,
+                        obscureText: true,
                         decoration: InputDecoration(
-                          hintText: '••••••',
+                          hintText: 'password',
+                          hintStyle: TextStyle(
+                            color: Colors.grey,
+                          ),
                           filled: false,
                           fillColor: Color(0xFFFFFFFF),
                           border: OutlineInputBorder(
@@ -159,7 +195,7 @@ class _LoginPageState  extends State<LoginPage>{
                     SizedBox(height:20),
                     Center(
                       child: InkWell(
-                        onTap: (){},
+                        onTap: login,
                         child: Container(
                           width: 180,
                           height: 65,
