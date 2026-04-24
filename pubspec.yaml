@@ -35,6 +35,7 @@ dependencies:
   # Use with the CupertinoIcons class for iOS style icons.
   cupertino_icons: ^1.0.8
   firebase_core: ^4.7.0
+  flutter_inset_shadow: ^2.0.3
 
 dev_dependencies:
   flutter_test:
@@ -57,6 +58,14 @@ flutter:
   # included with your application, so that you can use the icons in
   # the material Icons class.
   uses-material-design: true
+  fonts:
+    - family: Kavoon
+      fonts:
+        - asset: assets/fonts/Kavoon-Regular.ttf
+
+    - family: JockeyOne
+      fonts:
+        - asset: assets/fonts/JockeyOne-Regular.ttf
 
   # To add assets to your application, add an assets section, like this:
   # assets:

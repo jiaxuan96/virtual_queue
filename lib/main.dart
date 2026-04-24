@@ -1,5 +1,6 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'pages/login_page.dart';
 
 Future<void> main() async {
 
@@ -17,19 +18,7 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'VirtualQueue',
-      home: Scaffold(
-        appBar: AppBar(
-          title: Text(
-            'Virtual Queue',
-            style: TextStyle(
-              fontWeight: FontWeight.bold,
-            ),
-          ),
-          foregroundColor: Colors.black,
-          backgroundColor: Color(0xFFF6FAFB),
-        ),
-      ),
+      home: LoginPage(),
     );
   }
 }
