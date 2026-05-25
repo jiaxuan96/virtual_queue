@@ -84,7 +84,7 @@ class QueueStatusPage extends StatelessWidget {
                 
                 // 1. TOP APP BAR HEADER
                 Positioned(
-                  top: 0,
+                  top: MediaQuery.of(context).padding.top + 6,
                   left: 0,
                   right: 0,
                   height: 72,
@@ -99,7 +99,7 @@ class QueueStatusPage extends StatelessWidget {
                           onPressed: () => Navigator.pop(context),
                         ),
                         const Text(
-                          'Q',
+                          'VQ',
                           style: TextStyle(
                             fontFamily: 'Plus Jakarta Sans',
                             fontSize: 24,
@@ -125,7 +125,7 @@ class QueueStatusPage extends StatelessWidget {
 
                 // 2. EDITORIAL HEADER SECTION
                 Positioned(
-                  top: 96,
+                  top: 116,
                   left: 24,
                   right: 24,
                   height: 111.5,
@@ -163,10 +163,10 @@ class QueueStatusPage extends StatelessWidget {
                 StreamBuilder<DocumentSnapshot>(
                   stream: FirebaseFirestore.instance.collection('queues').doc(restaurantId).snapshots(),
                   builder: (context, snapshot) {
-                    int currentServing = 45; // Default mockup layout fallback
+                    int currentServing = 0; // Default mockup layout fallback
                     if (snapshot.hasData && snapshot.data!.exists) {
                       var data = snapshot.data!.data() as Map<String, dynamic>;
-                      currentServing = data['current_serving'] ?? 45;
+                      currentServing = data['current_serving'] ?? 0;
                     }
 
                     int peopleAhead = myTicketNumber - currentServing;
