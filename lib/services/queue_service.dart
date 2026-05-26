@@ -1,4 +1,6 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:virtual_queue/models/restaurant_queue_model.dart';
+import 'package:virtual_queue/models/restaurant_queue_model.dart';
 
 class QueueService {
   final FirebaseFirestore _db = FirebaseFirestore.instance;
@@ -47,6 +49,23 @@ class QueueService {
       'status': 'WAITING',
       'user_id': userId,
       'created_at': FieldValue.serverTimestamp(),
+    });
+  }
+
+  // --- Restaurant Side --- //
+  // Listens to live queue changes from Firestore
+  Stream<RestaurantQueueModel> watchRestaurantQueue(String restaurantId) {
+    return _db.collection('queues').doc(restaurantId).snapshots().map((doc){
+      final data = doc.data() as Map<String, dynamic>? ?? {};
+      // Convert data to model
+      return RestaurantQueueModel.fromMap(data);
+    });
+  }
+
+  // Update current serving when staff pressing Call Next
+  Future<void> callNextCustomer(String restaurantId) async {
+    await _db.collection('queues').doc(restaurantId).update({
+      'current_serving': FieldValue.increment(1),
     });
   }
 }

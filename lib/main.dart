@@ -1,8 +1,8 @@
 import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
 // import 'firebase_options.dart';
-// import 'pages/login_page.dart';
-import 'pages/restaurant_card_page.dart';
+import 'views/login_page.dart';
+// import 'views/restaurant_card_page.dart';
 
 Future<void> main() async {
 
@@ -20,8 +20,8 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      // home: LoginPage(),
-      home: RestaurantCardPage(),
+      home: LoginPage(),
+      // home: RestaurantCardPage(),
     );
   }
 }
