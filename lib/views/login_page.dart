@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_inset_shadow/flutter_inset_shadow.dart' as inset;
-import 'package:virtual_queue/services/auth_service.dart';
-import 'package:virtual_queue/pages/home_page.dart';
+import 'package:virtual_queue/views/home_page.dart';
+import 'package:virtual_queue/viewmodels/login_viewmodel.dart';
+import 'package:virtual_queue/views/restaurant_card_page.dart';
+import 'package:virtual_queue/views/restaurant_queue_page.dart';
 
 class LoginPage extends StatefulWidget{
   const LoginPage({super.key});
@@ -11,26 +13,47 @@ class LoginPage extends StatefulWidget{
 }
 
 class _LoginPageState  extends State<LoginPage>{
+  final viewModel = LoginViewModel();
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
 
-  final auth = AuthService();
-
   Future<void> login() async {
-    final user = await auth.login(
-        emailController.text.trim(),
-        passwordController.text.trim(),
+    final profile = await viewModel.login(
+      emailController.text.trim(),
+      passwordController.text.trim(),
     );
 
-    if (user != null) {
-      Navigator.pushReplacement(
-          context,
-          MaterialPageRoute(builder: (context) => const HomePage()),
-      );
-    } else{
+    if (!mounted) return;
+
+    if (profile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text("Login failed")),
+        SnackBar(content: Text(viewModel.errorMessage ?? 'Login failed')),
+      );
+      return;
+    }
+
+    if (profile.isRestaurantOwner) {
+      final restaurantId = profile.firstRestaurantId;
+      final restaurantBrandId = profile.restaurantBrandId;
+
+      if (restaurantId == null || restaurantBrandId == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Restaurant profile not found')),
+        );
+        return;
+      }
+
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+          builder: (_) =>
+              RestaurantQueuePage(
+                restaurantBrandId: restaurantBrandId,
+                restaurantId: restaurantId,
+                restaurantIds: profile.restaurantIds,
+              ),
+        ),
       );
     }
   }
