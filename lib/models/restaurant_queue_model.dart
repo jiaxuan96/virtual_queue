@@ -29,8 +29,8 @@
 // }
 
 class RestaurantQueueModel {
-  final String brandId;       // 🔗 Structural parent brand document link ID
-  final String restaurantId;  // 🔗 Structural child branch subcollection document link ID
+  final String brandId;       
+  final String restaurantId;  
   final int currentServing;
   final int nextAvailableNumber;
 
