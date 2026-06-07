@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
 import '../models/user_profile.dart';
 import '../services/auth_service.dart';
 
@@ -18,13 +19,34 @@ class LoginViewModel extends ChangeNotifier{
 
       if (profile == null) {
         errorMessage = 'Login failed or user profile not found';
+        return null;
       }
 
+      // Return user profile to LoginPage
+      // LoginPage will check role and navigate
       return profile;
+
+    } on FirebaseAuthException catch (e) {
+      // Handle Firebase Auth specific errors
+      if (e.code == 'invalid-email') {
+        errorMessage = 'Invalid email format';
+      } else if (e.code == 'user-not-found') {
+        errorMessage = 'No user found with this email';
+      } else if (e.code == 'wrong-password') {
+        errorMessage = 'Wrong password';
+      } else if (e.code == 'invalid-credential') {
+        errorMessage = 'Invalid email or password';
+      } else {
+        errorMessage = e.message ?? 'Login failed';
+      }
+
+      return null;
     } catch (e) {
-      errorMessage = 'Login Failed';
+      // Handle other unexpected errors
+      errorMessage = 'Something went wrong';
       return null;
     } finally {
+      // Stop loading after login finished
       isLoading = false;
       notifyListeners();
     }

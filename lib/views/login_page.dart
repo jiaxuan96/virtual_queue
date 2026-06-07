@@ -2,8 +2,11 @@ import 'package:flutter/material.dart';
 import 'package:flutter_inset_shadow/flutter_inset_shadow.dart' as inset;
 import 'package:virtual_queue/views/home_page.dart';
 import 'package:virtual_queue/viewmodels/login_viewmodel.dart';
+import 'package:virtual_queue/views/registration_page.dart';
 import 'package:virtual_queue/views/restaurant_card_page.dart';
 import 'package:virtual_queue/views/restaurant_queue_page.dart';
+import 'package:flutter/gestures.dart';
+import 'package:virtual_queue/views/customer_home_view.dart';
 
 class LoginPage extends StatefulWidget{
   const LoginPage({super.key});
@@ -33,7 +36,7 @@ class _LoginPageState  extends State<LoginPage>{
       return;
     }
 
-    if (profile.isRestaurantOwner) {
+    if (profile.isRestaurant) {
       final restaurantId = profile.firstRestaurantId;
       final restaurantBrandId = profile.restaurantBrandId;
 
@@ -53,6 +56,13 @@ class _LoginPageState  extends State<LoginPage>{
                 restaurantId: restaurantId,
                 restaurantIds: profile.restaurantIds,
               ),
+        ),
+      );
+    } else if (profile.isCustomer) {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(
+            builder: (_) => CustomerHomeView(),
         ),
       );
     }
@@ -209,7 +219,17 @@ class _LoginPageState  extends State<LoginPage>{
                               text: 'Register here',
                               style: TextStyle(
                                 color: Colors.blue,
-                              )
+                                decoration: TextDecoration.underline,
+                              ),
+                              recognizer: TapGestureRecognizer()
+                              ..onTap = () {
+                                Navigator.push(
+                                  context,
+                                  MaterialPageRoute(
+                                    builder: (cotext) => RegistrationPage(),
+                                  ),
+                                );
+                              },
                             ),
                           ],
                         ),

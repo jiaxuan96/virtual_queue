@@ -26,8 +26,11 @@ class UserProfile {
     );
   }
 
-  // check if this user is a restaurant owner
-  bool get isRestaurantOwner => role == 'restaurant_owner';
+  // check if it is restaurant
+  bool get isRestaurant => role == 'restaurant';
+  // check if it is customer
+  bool get isCustomer => role == 'customer';
+
 
   String? get firstRestaurantId {
     if(restaurantIds.isEmpty) return null;
