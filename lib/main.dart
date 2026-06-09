@@ -5,6 +5,7 @@ import 'views/login_page.dart';
 import 'views/restaurant_card_page.dart';
 import 'views/home_page.dart';
 import 'views/customer_home_view.dart';
+import 'views/registration_page.dart';
 
 Future<void> main() async {
 
@@ -22,9 +23,10 @@ class MyApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      // home: LoginPage(),
+      home: LoginPage(),
       // home: RestaurantCardPage(),
-      home: CustomerHomeView(),
+      // home: CustomerHomeView(),
+      // home: RegistrationPage(),
     );
   }
 }
