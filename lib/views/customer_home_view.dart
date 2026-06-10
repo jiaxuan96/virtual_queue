@@ -473,7 +473,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                 color: const Color(0xFFECEFF1),
                 image: DecorationImage(
                   image: AssetImage('assets/images/$assetName.png'), 
-                  onError: (exception, stackTrace) => const AssetImage('assets/images/Oriental_Kopi.png'),
+                  onError: (exception, stackTrace) => const AssetImage('assets/images/Restaurant_Icon.png'),
                   fit: BoxFit.cover,
                 ),
               ),

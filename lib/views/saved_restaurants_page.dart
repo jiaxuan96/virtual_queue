@@ -174,7 +174,7 @@ class _SavedRestaurantsPageState extends State<SavedRestaurantsPage> {
                       fit: BoxFit.cover,
                       errorBuilder: (context, error, stackTrace) {
                         return const Image(
-                          image: AssetImage('assets/images/Oriental_Kopi.png'),
+                          image: AssetImage('assets/images/Restaurant_Icon.png'),
                           fit: BoxFit.cover,
                         );
                       },

@@ -75,6 +75,7 @@
 // }
 
 import 'dart:async';
+import 'package:rxdart/rxdart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
@@ -164,7 +165,7 @@ class QueueStatusViewModel {
       return Stream.value(null);
     }
 
-    // A. Listen in real-time to the user's personal active queue shortcut subcollection
+    // A. Listen in real-time to changes in the user's personal active queue shortcut
     return _firestore
         .collection('users')
         .doc(user.uid)
@@ -172,46 +173,56 @@ class QueueStatusViewModel {
         .where('status', isEqualTo: 'WAITING')
         .limit(1)
         .snapshots()
-        .asyncMap((userShortcutSnap) async {
+        .switchMap((userShortcutSnap) {
           
+          // If the user isn't holding any active tickets, emit null instantly to clear the UI
           if (userShortcutSnap.docs.isEmpty) {
-            return null;
+            debugPrint('ℹ️ [Queue Status Stream] User has no active waiting tickets.');
+            return Stream.value(null);
           }
 
           final shortcutData = userShortcutSnap.docs.first.data();
           final String restaurantId = userShortcutSnap.docs.first.id;
           final String brandId = shortcutData['brand_id'] ?? '';
 
-          if (brandId.isEmpty || restaurantId.isEmpty) return null;
+          if (brandId.isEmpty || restaurantId.isEmpty) {
+            return Stream.value(null);
+          }
 
-          // B. Fetch the real-time live current counter status from the master queue
-          final queueSnap = await _firestore.collection('queues').doc(restaurantId).get();
-          final masterQueueData = queueSnap.data() as Map<String, dynamic>? ?? {};
+          debugPrint('🔗 [Queue Status Stream] User ticket found (#${shortcutData['ticket_number']}). Subscribing to live updates for restaurant: $restaurantId');
 
-          // 🚀 FIXED: Merge the user's personal ticket variables directly into the queueData map payload!
-          final Map<String, dynamic> combinedQueueData = {
-            ...masterQueueData, 
-            'ticket_number': shortcutData['ticket_number'] ?? 0, // Injects your actual ticket number (#15)
-            'ticket_id': shortcutData['ticket_id'] ?? '',
-            'brand_id': brandId,
-            'restaurant_id': restaurantId,
-          };
+          // B. 🚀 THE REAL-TIME FIX: Listen to real-time SNAPSHOTS of the master queue document
+          final Stream<DocumentSnapshot> masterQueueStream = 
+              _firestore.collection('queues').doc(restaurantId).snapshots();
 
-          // C. Fetch static profile references for copy strings
-          final brandSnap = await _firestore.collection('restaurant_brands').doc(brandId).get();
-          final restSnap = await _firestore
-              .collection('restaurant_brands')
-              .doc(brandId)
-              .collection('restaurants')
-              .doc(restaurantId)
-              .get();
+          // C. Map master snapshot events into your unified tracking state object as they occur
+          return masterQueueStream.asyncMap((queueSnap) async {
+            final masterQueueData = queueSnap.data() as Map<String, dynamic>? ?? {};
 
-          // D. Pack everything together into your UI state object
-          return QueueStatusState(
-            queueData: combinedQueueData, // ✅ Pass combined parameters down to data model math operations!
-            restaurantData: restSnap.data() as Map<String, dynamic>? ?? {},
-            brandData: brandSnap.data() as Map<String, dynamic>? ?? {},
-          );
+            // Combine live master counters with our persistent user ticket parameters
+            final Map<String, dynamic> combinedQueueData = {
+              ...masterQueueData, 
+              'ticket_number': shortcutData['ticket_number'] ?? 0,
+              'ticket_id': shortcutData['ticket_id'] ?? '',
+              'brand_id': brandId,
+              'restaurant_id': restaurantId,
+            };
+
+            // D. Fetch static reference blocks for copywriting strings
+            final brandSnap = await _firestore.collection('restaurant_brands').doc(brandId).get();
+            final restSnap = await _firestore
+                .collection('restaurant_brands')
+                .doc(brandId)
+                .collection('restaurants')
+                .doc(restaurantId)
+                .get();
+
+            return QueueStatusState(
+              queueData: combinedQueueData, 
+              restaurantData: restSnap.data() as Map<String, dynamic>? ?? {},
+              brandData: brandSnap.data() as Map<String, dynamic>? ?? {},
+            );
+          });
         });
   }
 }

@@ -180,7 +180,7 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
                               decoration: BoxDecoration(
                                 image: DecorationImage(
                                   image: AssetImage('assets/images/$assetName.png'), 
-                                  onError: (_, __) => const AssetImage('assets/images/Oriental_Kopi.png'),
+                                  onError: (exception, stackTrace) => const AssetImage('assets/images/Restaurant_Icon.png'),
                                   fit: BoxFit.cover,
                                 ),
                               ),
