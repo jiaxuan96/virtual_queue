@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/restaurant_display_state.dart';
 import '../viewmodels/customer_home_viewmodel.dart';
 import 'restaurant_card_page.dart'; 
 import 'queue_status_page.dart'; 
+import 'user_profile_view.dart';
 
 class CustomerHomeView extends StatefulWidget {
   const CustomerHomeView({super.key});
@@ -16,37 +18,28 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
   String? activeRestaurantId;
   int? activeTicketNumber;
 
+  // 🔄 Callback helper to handle state transitions cleanly
+  void _updateQueueState(String restId, int ticketNum) {
+    setState(() {
+      activeRestaurantId = restId;
+      activeTicketNumber = ticketNum;
+      _currentIndex = 1; // Auto-route user straight to the active Queue tab
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // List of structural master pages mapped to navigation tab indices
-    final List<Widget> tabs = [
-      // ✅ FIXED: Passing down the state modifier function into the Explore Sub-Widget Container
-      ExploreTabContent(
-        onQueueRegisteredInChild: (restId, ticketNum) {
-          setState(() {
-            activeRestaurantId = restId;
-            activeTicketNumber = ticketNum;
-            _currentIndex = 1;
-          });
-        },
-      ),
+    // 🛠️ FIX: We keep the tabs structure inside a dynamically evaluated array 
+    // but pass live state down explicitly every build run.
+    final List<Widget> structuralTabs = [
+      ExploreTabContent(onQueueRegisteredInChild: _updateQueueState),
       
-      // Dynamically switches layout based on whether they have an active ticket
-      activeTicketNumber != null 
-        ? QueueStatusPage(
-            restaurantId: activeRestaurantId!,
-            myTicketNumber: activeTicketNumber!,
-            ticketId: '',
-          )
-        : const Center(
-            child: Text(
-              'You are not currently in any queue line.',
-              style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 16, color: Color(0xFF6E797B)),
-            ),
-          ),
+      // The Queue View block now remains consistently tracked by the underlying engine
+      _buildQueueTabContent(),
+      // const QueueStatusPage(),
           
       const Center(child: Text('Reservations Page Coming Soon')),
-      const Center(child: Text('Profile Settings Page Coming Soon')),
+      const UserProfileView(),
     ];
 
     return Scaffold(
@@ -56,7 +49,7 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
         bottom: false,
         child: IndexedStack(
           index: _currentIndex,
-          children: tabs,
+          children: structuralTabs, // 👈 Consuming the stable stack structures
         ),
       ),
 
@@ -89,6 +82,27 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
           ],
         ),
       ),
+    );
+  }
+
+  // 🛠️ CRITICAL FIX: Separates structural initialization from render conditions
+  Widget _buildQueueTabContent() {
+    // If the home view already has the variables in memory, pass them down immediately
+    if (activeTicketNumber != null && activeRestaurantId != null) {
+      return QueueStatusPage(
+        key: ValueKey(activeTicketNumber), 
+        restaurantId: activeRestaurantId!,
+        myTicketNumber: activeTicketNumber!,
+        ticketId: '',
+      );
+    }
+    
+    // 🚀 THE RESCUE PATHWAY: If variables are null on fresh login, 
+    // STILL return the QueueStatusPage so its internal fallback engine can fetch the active ticket!
+    return const QueueStatusPage(
+      restaurantId: null,
+      myTicketNumber: null,
+      ticketId: null,
     );
   }
 
@@ -153,6 +167,8 @@ class ExploreTabContent extends StatefulWidget {
 class _ExploreTabContentState extends State<ExploreTabContent> {
   final CustomerHomeViewModel _viewModel = CustomerHomeViewModel();
 
+  String? _selectedCategory;
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -170,7 +186,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
             children: [
               IconButton(
                 padding: EdgeInsets.zero,
-                icon: const Icon(Icons.menu_rounded, color: Color(0xFF115E59), size: 24),
+                icon: const Icon(Icons.menu_rounded, color: Color.fromARGB(0, 17, 94, 89), size: 24),
                 onPressed: () {},
               ),
               const Text(
@@ -314,7 +330,14 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
               ),
             ),
             GestureDetector(
-              onTap: () {},
+              onTap: () {
+                // Clear filters completely on 'See all'
+                setState(() {
+                  _selectedCategory = null;
+                });
+
+                _viewModel.applyCuisineFilter(null);
+              },
               child: const Text(
                 'See all',
                 style: TextStyle(
@@ -329,40 +352,67 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 100,
+          height: 104, // Marginally increased to cleanly prevent any text vertical clipping bounds
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: categories.length,
             itemBuilder: (context, index) {
+              final String currentLabel = categories[index]['label'] as String;
+              // 🧠 Verify if this specific icon node is active
+              final bool isSelected = _selectedCategory == currentLabel;
+
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F4F5),
-                        borderRadius: BorderRadius.circular(16),
+                child: GestureDetector(
+                  // ⬇️ Locate your item card gesture/inkwell row inside _buildCategoriesSection()
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedCategory = null; // Toggle off
+                      } else {
+                        _selectedCategory = currentLabel; // Toggle on
+                      }
+                      
+                      // 📢 NOTIFY VIEW MODEL: Tells the backend engine to change the query rule before updating the layout!
+                      _viewModel.applyCuisineFilter(_selectedCategory);
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      // AnimatedContainer allows smooth, native color fades when tapping filters
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          // ✅ Highlighting State Color changes instantly
+                          color: isSelected ? const Color(0xFF006670) : const Color(0xFFF0F4F5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: isSelected 
+                              ? Border.all(color: const Color(0xFF006670), width: 1)
+                              : Border.all(color: Colors.transparent, width: 1),
+                        ),
+                        child: Icon(
+                          categories[index]['icon'] as IconData,
+                          // ✅ Invert icon color when active
+                          color: isSelected ? Colors.white : const Color(0xFF006670),
+                          size: 24,
+                        ),
                       ),
-                      child: Icon(
-                        categories[index]['icon'] as IconData,
-                        color: const Color(0xFF006670),
-                        size: 24,
+                      const SizedBox(height: 8),
+                      Text(
+                        currentLabel,
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontSize: 14,
+                          // ✅ Bold text if item is active
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? const Color(0xFF006670) : const Color(0xFF3E494B),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      categories[index]['label'] as String,
-                      style: const TextStyle(
-                        fontFamily: 'Plus Jakarta Sans',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF3E494B),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },

@@ -1,7 +1,10 @@
 import 'package:flutter/material.dart';
+import 'package:firebase_auth/firebase_auth.dart';
+import 'package:cloud_firestore/cloud_firestore.dart';
 import '../viewmodels/restaurant_card_viewmodel.dart';
 import '../models/restaurant_detail_state.dart';
 import 'queue_status_page.dart';
+import '../services/queue_service.dart';
 
 class RestaurantCardPage extends StatefulWidget {
   final String brandId;       
@@ -20,12 +23,60 @@ class RestaurantCardPage extends StatefulWidget {
 class _RestaurantCardPageState extends State<RestaurantCardPage> {
   final RestaurantCardViewModel _viewModel = RestaurantCardViewModel();
   bool _isLoading = false;
+  bool _isBookmarked = false; // Tracks if the restaurant is saved
   
   // TODO: Replace with your actual authenticated user session state
-  final String _userId = "test_customer_123"; 
+  // final String _userId = "test_customer_123"; 
+
+  @override
+  void initState() {
+    super.initState();
+    // ⏳ Trigger database read as soon as the widget context initializes
+    _checkIfBookmarkedInitialState();
+  }
+
+  // 🎯 Fetch the real authenticated User ID string from the active session
+  String? getRealUserId() {
+    final User? user = FirebaseAuth.instance.currentUser;
+    
+    if (user != null) {
+      debugPrint('ℹ️ [Auth Session] Active User verified: ${user.uid}');
+      return user.uid; // 🚀 This is your real, distinct Firestore document key string!
+    } else {
+      debugPrint('⚠️ [Auth Warning] No user is logged in right now.');
+      return null;
+    }
+  }
+
+
+  void _checkIfBookmarkedInitialState() async {
+    final User? currentUser = FirebaseAuth.instance.currentUser;
+    if (currentUser == null) return; // Exit early if anonymous/logged out
+
+    final String realUserId = currentUser.uid;
+    
+    final docSnapshot = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(realUserId)
+        .collection('bookmarks')
+        .doc(widget.restaurantId)
+        .get();
+
+    if (mounted && docSnapshot.exists) {
+      setState(() {
+        _isBookmarked = true;
+      });
+    }
+  }
 
   void _handleJoinQueue() async {
     if (_isLoading) return; 
+
+    final String? realUserId = getRealUserId();
+    if (realUserId == null) {
+      _showErrorDialog('You must be signed in to join an active queue line.');
+      return;
+    }
 
     setState(() => _isLoading = true);
     debugPrint('🚀 [Queue System] Attempting to join line...');
@@ -34,7 +85,7 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
       int? assignedNumber = await _viewModel.joinQueueLine(
         brandId: widget.brandId,
         restaurantId: widget.restaurantId,
-        userId: _userId,
+        userId: realUserId,
       );
       
       setState(() => _isLoading = false);
@@ -51,8 +102,19 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
       }
     } catch (e) {
       setState(() => _isLoading = false);
-      if (mounted) {
-        _showErrorDialog('Database connection error: $e');
+      if (!mounted) return;
+
+      // Convert the error payload cleanly to a readable string format
+      final String errorMessage = e.toString();
+
+      // 🚀 THE FIX: Differentiate between validation guardrails and network dropouts
+      if (errorMessage.contains('You cannot join a new queue')) {
+        // Strip out the "Exception: " prefix cleanly for a premium UI look
+        final String cleanWarning = errorMessage.replaceAll('Exception: ', '');
+        _showErrorDialog(cleanWarning);
+      } else {
+        // Fallback for real Firebase/Firestore infrastructure connection failures
+        _showErrorDialog('Database connection error: $errorMessage');
       }
     }
   }
@@ -149,7 +211,45 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
                                     onTap: () => Navigator.pop(context),
                                     child: _buildBlurCircleButton(Icons.arrow_back),
                                   ),
-                                  _buildBlurCircleButton(Icons.bookmark_border),
+                                  GestureDetector(
+                                    onTap: () async {
+                                      // 🚀 STEP 1: Dynamically grab the real authentication user unique ID
+                                      final User? currentUser = FirebaseAuth.instance.currentUser;
+
+                                      if (currentUser == null) {
+                                        // 🔒 Safety Fallback: Prompt the user to log in if their token expired
+                                        ScaffoldMessenger.of(context).showSnackBar(
+                                          const SnackBar(content: Text('Please log in to save your favorite restaurants!')),
+                                        );
+                                        return;
+                                      }
+
+                                      final String realUserId = currentUser.uid; // Your real user ID string (e.g., "f0tM4CtbFiP...")
+
+                                      setState(() {
+                                        _isBookmarked = !_isBookmarked; // Toggle visual state immediately
+                                      });
+
+                                      // 🚀 STEP 2: Execute your Firestore transaction mutations securely
+                                      if (_isBookmarked) {
+                                        debugPrint('📌 Saving to profile path: users/$realUserId/bookmarks/${widget.restaurantId}');
+                                        await _viewModel.saveToBookmarks(
+                                          userId: realUserId,
+                                          restaurantId: widget.restaurantId,
+                                          brandId: widget.brandId,
+                                        );
+                                      } else {
+                                        debugPrint('🗑️ Removing from profile path: users/$realUserId/bookmarks/${widget.restaurantId}');
+                                        await _viewModel.removeFromBookmarks(
+                                          userId: realUserId,
+                                          restaurantId: widget.restaurantId,
+                                        );
+                                      }
+                                    },
+                                    child: _buildBlurCircleButton(
+                                      _isBookmarked ? Icons.bookmark_rounded : Icons.bookmark_border_rounded,
+                                    ),
+                                  ),
                                 ],
                               ),
                             ),
