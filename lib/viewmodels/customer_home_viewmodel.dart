@@ -1,46 +1,49 @@
 import 'dart:async';
-import 'package:flutter/material.dart';
+import 'package:rxdart/rxdart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
-import 'package:rxdart/rxdart.dart'; 
+import 'package:flutter/material.dart';
 import '../models/restaurant_display_state.dart';
 import '../models/restaurant_model.dart';
 import '../models/restaurant_brand_model.dart';
 import '../models/restaurant_queue_model.dart';
 
-// (Keep your RestaurantDisplayState class here exactly as it is)
-
 class CustomerHomeViewModel {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
-  // 🎯 FIX: BehaviorSubject buffers the last emitted value. 
-  // Even if the UI listens late, it will immediately receive the active filter!
+  // 🎯 Track both the Category Selection AND Text Search Inputs
   final BehaviorSubject<String?> _filterSubject = BehaviorSubject<String?>.seeded(null);
+  final BehaviorSubject<String> _searchQuerySubject = BehaviorSubject<String>.seeded('');
 
-  // 🎯 The view UI calls this method to change selection states
+  // UI inputs hook here
   void applyCuisineFilter(String? cuisine) {
     debugPrint('⚡ [ViewModel] UI requested category change to: "$cuisine"');
     _filterSubject.add(cuisine); 
   }
 
-  /// 🎧 DRIVER STREAM: Reacts to BOTH filter clicks AND real-time database updates!
-  Stream<List<RestaurantDisplayState>> get restaurantCardsStream {
-    // CombineLatest2 combines our local filter events with live backend database streams
-    return Rx.combineLatest2<String?, QuerySnapshot, Stream<List<RestaurantDisplayState>>>(
-      _filterSubject.stream,
-      _firestore.collection('restaurant_brands').snapshots(), // 🕒 Real-time Firestore stream listener
-      (activeFilter, brandSnapshot) {
-        
-        // This inner block runs asynchronously to stitch our subcollections together
-        return Stream.fromFuture(_fetchDisplayStates(activeFilter, brandSnapshot));
-      },
-    ).flatMap((aminoStream) => aminoStream); // Flattens our nested stream structures out smoothly
+  void updateSearchQuery(String query) {
+    _searchQuerySubject.add(query);
   }
 
-  /// Helper method that handles the heavy lifting of fetching subcollections & mapping states
-  // 📁 viewmodels/customer_home_viewmodel.dart
+  /// 🎧 UNIFIED REAL-TIME STREAM PIPELINE: Reacts to text queries, category choices, and DB edits!
+  Stream<List<RestaurantDisplayState>> get restaurantCardsStream {
+    return Rx.combineLatest3<String?, String, QuerySnapshot, Stream<List<RestaurantDisplayState>>>(
+      _filterSubject.stream,
+      _searchQuerySubject.stream,
+      _firestore.collection('restaurant_brands').snapshots(),
+      (activeCuisine, activeSearchText, brandSnapshot) {
+        return Stream.fromFuture(_fetchAndFilterDisplayStates(activeCuisine, activeSearchText, brandSnapshot));
+      },
+    ).flatMap((stream) => stream);
+  }
 
-  Future<List<RestaurantDisplayState>> _fetchDisplayStates(String? activeCuisineFilter, QuerySnapshot brandSnapshot) async {
+  /// Deep pipeline data hydrator and filtering processor
+  Future<List<RestaurantDisplayState>> _fetchAndFilterDisplayStates(
+    String? activeCuisineFilter, 
+    String searchText,
+    QuerySnapshot brandSnapshot,
+  ) async {
     List<RestaurantDisplayState> displayCards = [];
+    final String cleanSearchText = searchText.trim().toLowerCase();
 
     for (var brandDoc in brandSnapshot.docs) {
       try {
@@ -48,19 +51,14 @@ class CustomerHomeViewModel {
         final brandModel = RestaurantBrandModel.fromMap(brandData);
         final String brandId = brandDoc.id;
 
-        // 🎯 1. BRAND-LEVEL FILTER CHECK:
-        // Since 'cuisine' is inside the Brand document, check it before opening branches!
+        // 🎯 1. CUISINE CATEGORY FILTER ENGINE
         if (activeCuisineFilter != null) {
           final String dbCuisine = (brandData['cuisine'] ?? '').toString().trim().toLowerCase();
           final String selectedCuisine = activeCuisineFilter.trim().toLowerCase();
-          
-          // If this master brand doesn't match the clicked category, skip all its branches entirely!
-          if (dbCuisine != selectedCuisine) {
-            continue; 
-          }
+          if (dbCuisine != selectedCuisine) continue; 
         }
 
-        // 🟢 2. FETCH BRANCHES: Only read branches for brands matching our category
+        // Fetch children restaurant branches
         Query restaurantCollectionRef = _firestore
             .collection('restaurant_brands')
             .doc(brandId)
@@ -72,11 +70,24 @@ class CustomerHomeViewModel {
           final String restaurantId = restaurantDoc.id;
           final restaurantModel = RestaurantModel.fromMap(restaurantDoc.data() as Map<String, dynamic>);
 
+          // 🎯 2. REAL-TIME TEXT SEARCH FILTERING
+          // Verifies if the user's query string maps to either the brand title or cuisine categorization tag strings
+          if (cleanSearchText.isNotEmpty) {
+            final String brandName = (brandModel.name ?? '').isNotEmpty 
+                ? brandModel.name!.toLowerCase() 
+                : (brandData['name'] ?? brandData['brand_id'] ?? '').toString().toLowerCase();
+            final String cuisineType = (brandModel.cuisine ?? '').toLowerCase();
+            final String branchName = (restaurantModel.branchName ?? '').toLowerCase(); // Fallback if applicable
+
+            final bool matchesSearch = brandName.contains(cleanSearchText) || 
+                                       cuisineType.contains(cleanSearchText) ||
+                                       branchName.contains(cleanSearchText);
+            
+            if (!matchesSearch) continue; // Skip card item entry mapping loops
+          }
+
           // 🟢 3. FETCH LIVE QUEUES
-          final queueDoc = await _firestore
-              .collection('queues')
-              .doc(restaurantId)
-              .get();
+          final queueDoc = await _firestore.collection('queues').doc(restaurantId).get();
 
           RestaurantQueueModel queueModel;
           if (queueDoc.exists) {
@@ -94,7 +105,7 @@ class CustomerHomeViewModel {
           displayCards.add(cardState);
         }
       } catch (e) {
-        debugPrint('🚨 Subcollection filtering alignment exception: $e');
+        debugPrint('🚨 Processing engine subcollection pipeline failure: $e');
       }
     }
     return displayCards;
@@ -124,8 +135,8 @@ class CustomerHomeViewModel {
     );
   }
 
-  // Close resources to cleanly avoid system memory leaks
   void dispose() {
     _filterSubject.close();
+    _searchQuerySubject.close();
   }
 }

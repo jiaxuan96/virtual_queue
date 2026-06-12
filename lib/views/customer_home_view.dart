@@ -166,8 +166,65 @@ class ExploreTabContent extends StatefulWidget {
 
 class _ExploreTabContentState extends State<ExploreTabContent> {
   final CustomerHomeViewModel _viewModel = CustomerHomeViewModel();
+  final TextEditingController _searchController = TextEditingController();
 
+  // List<RestaurantDisplayState> _allRestaurants = [];
+  // List<RestaurantDisplayState> _filteredRestaurants = [];
+  // bool _isSearching = false;
+
+  final ValueNotifier<bool> _isSearchingNotifier = ValueNotifier<bool>(false);
   String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      final String text = _searchController.text;
+      _viewModel.updateSearchQuery(text);
+      _isSearchingNotifier.value = text.trim().isNotEmpty;
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _isSearchingNotifier.dispose();
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  // String? _selectedCategory;
+
+  // 🚀 SEARCH FILTER ENGINE
+  // void _onSearchChanged() {
+  //   final String query = _searchController.text.trim().toLowerCase();
+
+  //   if (query.isEmpty) {
+  //     setState(() {
+  //       _isSearching = false;
+  //       _filteredRestaurants = List.from(_allRestaurants);
+  //     });
+  //     return;
+  //   }
+
+  //   setState(() {
+  //     _isSearching = true;
+  //     _filteredRestaurants = _allRestaurants.where((restaurantItem) {
+  //       // Extracting values
+  //       final String name = (restaurantItem.brand.name ?? '').toLowerCase();
+  //       final String cuisine = (restaurantItem.brand.cuisine ?? '').toLowerCase();
+  //       final String branch = (restaurantItem.restaurant.branchName ?? '').toLowerCase();
+        
+  //       // 🖨️ THE DIAGNOSTIC LOG: This prints the exact strings the app is searching through!
+  //       // debugPrint('🔎 [SEARCHING] User Typed: "$query"');
+  //       // debugPrint('   ├── Brand Name found in Model: "$name"');
+  //       // debugPrint('   ├── Cuisine Type found in Model: "$cuisine"');
+  //       // debugPrint('   └── Branch Name found in Model: "$branch"');
+
+  //       return name.contains(query) || cuisine.contains(query) || branch.contains(query);
+  //     }).toList();
+  //   });
+  // }
 
   @override
   Widget build(BuildContext context) {
@@ -223,7 +280,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
             _buildSearchSection(),
             const SizedBox(height: 32),
             _buildCategoriesSection(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
             const Text(
               'Restaurants',
               style: TextStyle(
@@ -246,6 +303,71 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
             ),
             const SizedBox(height: 24),
 
+            // StreamBuilder<List<RestaurantDisplayState>>(
+            //   stream: _viewModel.restaurantCardsStream,
+            //   builder: (context, snapshot) {
+            //     if (snapshot.connectionState == ConnectionState.waiting) {
+            //       return const Center(
+            //         child: Padding(
+            //           padding: EdgeInsets.only(top: 40.0),
+            //           child: CircularProgressIndicator(color: Color(0xFF006670)),
+            //         ),
+            //       );
+            //     }
+            //     if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            //       return _buildEmptyState();
+            //     }
+
+            //     _allRestaurants = snapshot.data!;
+            //     if (!_isSearching) {
+            //       _filteredRestaurants = List.from(_allRestaurants);
+            //     }
+
+            //     if (_filteredRestaurants.isEmpty) {
+            //       return Center(
+            //         child: Padding(
+            //           padding: const EdgeInsets.only(top: 40.0),
+            //           child: Text(
+            //             'No matching locations found.',
+            //             style: TextStyle(fontFamily: 'Plus Jakarta Sans', color: Colors.grey[600]),
+            //           ),
+            //         ),
+            //       );
+            //     }
+
+            //     return ListView.builder(
+            //       shrinkWrap: true,
+            //       physics: const NeverScrollableScrollPhysics(),
+            //       itemCount: _filteredRestaurants.length,
+            //       itemBuilder: (context, index) {
+            //         final restaurantItem = _filteredRestaurants[index];
+            //         return GestureDetector(
+            //           onTap: () async {
+            //             final returnedResult = await Navigator.push(
+            //               context,
+            //               MaterialPageRoute(
+            //                 builder: (context) => RestaurantCardPage(
+            //                   brandId: restaurantItem.queue.brandId ?? '',       
+            //                   restaurantId: restaurantItem.queue.restaurantId ?? '', 
+            //                 ),
+            //               ),
+            //             );
+
+            //             if (returnedResult != null && returnedResult is int) {
+            //               widget.onQueueRegisteredInChild(
+            //                 restaurantItem.queue.restaurantId ?? '',
+            //                 returnedResult,
+            //               );
+            //             }
+            //           },
+            //           child: _buildRestaurantCard(context, restaurantItem),
+            //         );
+            //       },
+            //     );
+            //   },
+            // ),
+
+            // 🎯 THE LIVE COMBINED-FILTER FEED (Handled cleanly via business layer)
             StreamBuilder<List<RestaurantDisplayState>>(
               stream: _viewModel.restaurantCardsStream,
               builder: (context, snapshot) {
@@ -258,16 +380,51 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                   );
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return _buildEmptyState();
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 40.0),
+                      child: Text(
+                        'No matching locations found.',
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans', 
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[600]
+                        ),
+                      ),
+                    ),
+                  );
                 }
 
-                final cardStates = snapshot.data!;
+                final List<RestaurantDisplayState> displayCards = snapshot.data!;
+
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: cardStates.length,
+                  itemCount: displayCards.length,
                   itemBuilder: (context, index) {
-                    return _buildRestaurantCard(context, cardStates[index]);
+                    final restaurantItem = displayCards[index];
+                    return GestureDetector(
+                      onTap: () async {
+                        final returnedResult = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RestaurantCardPage(
+                              brandId: restaurantItem.queue.brandId ?? '',       
+                              restaurantId: restaurantItem.queue.restaurantId ?? '', 
+                            ),
+                          ),
+                        );
+
+                        if (returnedResult != null && returnedResult is int) {
+                          widget.onQueueRegisteredInChild(
+                            restaurantItem.queue.restaurantId ?? '',
+                            returnedResult,
+                          );
+                        }
+                      },
+                      child: _buildRestaurantCard(context, restaurantItem),
+                    );
                   },
                 );
               },
@@ -286,19 +443,34 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
         color: const Color(0xFFDFE3E4),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const TextField(
+      child: TextField(
+        controller: _searchController,
+        style: const TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 16),
         decoration: InputDecoration(
           hintText: 'Search for restaurants, cuisines...',
-          hintStyle: TextStyle(
+          hintStyle: const TextStyle(
             fontFamily: 'Plus Jakarta Sans',
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: Color(0xFF3E494B),
           ),
-          prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF6E797B), size: 18),
-          suffixIcon: Icon(Icons.tune_rounded, color: Color(0xFF006670), size: 18),
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF6E797B), size: 18),
+          suffixIcon: ValueListenableBuilder<bool>(
+            valueListenable: _isSearchingNotifier,
+            builder: (context, isSearching, child) {
+              return isSearching
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF3E494B), size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        FocusScope.of(context).unfocus();
+                      },
+                    )
+                  : const Icon(Icons.tune_rounded, color: Color(0xFF006670), size: 18);
+            },
+          ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
       ),
     );
@@ -331,11 +503,9 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
             ),
             GestureDetector(
               onTap: () {
-                // Clear filters completely on 'See all'
                 setState(() {
                   _selectedCategory = null;
                 });
-
                 _viewModel.applyCuisineFilter(null);
               },
               child: const Text(
@@ -352,41 +522,35 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 104, // Marginally increased to cleanly prevent any text vertical clipping bounds
+          height: 104, 
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: categories.length,
             itemBuilder: (context, index) {
               final String currentLabel = categories[index]['label'] as String;
-              // 🧠 Verify if this specific icon node is active
               final bool isSelected = _selectedCategory == currentLabel;
 
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
                 child: GestureDetector(
-                  // ⬇️ Locate your item card gesture/inkwell row inside _buildCategoriesSection()
                   onTap: () {
                     setState(() {
                       if (isSelected) {
-                        _selectedCategory = null; // Toggle off
+                        _selectedCategory = null; 
                       } else {
-                        _selectedCategory = currentLabel; // Toggle on
+                        _selectedCategory = currentLabel; 
                       }
-                      
-                      // 📢 NOTIFY VIEW MODEL: Tells the backend engine to change the query rule before updating the layout!
                       _viewModel.applyCuisineFilter(_selectedCategory);
                     });
                   },
                   child: Column(
                     children: [
-                      // AnimatedContainer allows smooth, native color fades when tapping filters
                       AnimatedContainer(
                         duration: const Duration(milliseconds: 200),
                         width: 64,
                         height: 64,
                         decoration: BoxDecoration(
-                          // ✅ Highlighting State Color changes instantly
                           color: isSelected ? const Color(0xFF006670) : const Color(0xFFF0F4F5),
                           borderRadius: BorderRadius.circular(16),
                           border: isSelected 
@@ -395,7 +559,6 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                         ),
                         child: Icon(
                           categories[index]['icon'] as IconData,
-                          // ✅ Invert icon color when active
                           color: isSelected ? Colors.white : const Color(0xFF006670),
                           size: 24,
                         ),
@@ -406,7 +569,6 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                         style: TextStyle(
                           fontFamily: 'Plus Jakarta Sans',
                           fontSize: 14,
-                          // ✅ Bold text if item is active
                           fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
                           color: isSelected ? const Color(0xFF006670) : const Color(0xFF3E494B),
                         ),
