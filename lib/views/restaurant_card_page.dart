@@ -238,12 +238,70 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
                                           restaurantId: widget.restaurantId,
                                           brandId: widget.brandId,
                                         );
+                                        
+                                        // 💎 Professional Success Snackbar
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).clearSnackBars();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              behavior: SnackBarBehavior.floating,
+                                              backgroundColor: const Color(0xFF064E3B), // Premium Deep Teal
+                                              margin: const EdgeInsets.all(16),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              duration: const Duration(seconds: 2),
+                                              content: const Row(
+                                                children: [
+                                                  Icon(Icons.bookmark_added_rounded, color: Colors.white, size: 20),
+                                                  SizedBox(width: 12),
+                                                  Text(
+                                                    'Saved restaurant!',
+                                                    style: TextStyle(
+                                                      fontFamily: 'Plus Jakarta Sans',
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 14,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }
                                       } else {
                                         debugPrint('🗑️ Removing from profile path: users/$realUserId/bookmarks/${widget.restaurantId}');
                                         await _viewModel.removeFromBookmarks(
                                           userId: realUserId,
                                           restaurantId: widget.restaurantId,
                                         );
+                                        
+                                        // 💎 Professional Removal Snackbar
+                                        if (context.mounted) {
+                                          ScaffoldMessenger.of(context).clearSnackBars();
+                                          ScaffoldMessenger.of(context).showSnackBar(
+                                            SnackBar(
+                                              behavior: SnackBarBehavior.floating,
+                                              backgroundColor: const Color(0xFF334155), // Clean Slate Gray
+                                              margin: const EdgeInsets.all(16),
+                                              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+                                              duration: const Duration(seconds: 2),
+                                              content: const Row(
+                                                children: [
+                                                  Icon(Icons.bookmark_remove_rounded, color: Colors.white, size: 20),
+                                                  SizedBox(width: 12),
+                                                  Text(
+                                                    'Unsaved restaurant',
+                                                    style: TextStyle(
+                                                      fontFamily: 'Plus Jakarta Sans',
+                                                      fontWeight: FontWeight.w600,
+                                                      fontSize: 14,
+                                                      color: Colors.white,
+                                                    ),
+                                                  ),
+                                                ],
+                                              ),
+                                            ),
+                                          );
+                                        }
                                       }
                                     },
                                     child: _buildBlurCircleButton(

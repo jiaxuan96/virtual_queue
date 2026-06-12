@@ -27,6 +27,8 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
   int? _activeTicketNumber;
   String? _activeTicketId;
 
+  bool _hasAlertedCalled = false;
+
   @override
   void initState() {
     super.initState();
@@ -58,6 +60,7 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
           _activeRestaurantId = widget.restaurantId;
           _activeTicketNumber = widget.myTicketNumber;
           _activeTicketId = widget.ticketId;
+          _hasAlertedCalled = false;
         });
       }
     }
@@ -91,6 +94,86 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
     };
   }
 
+  // 🔔 THE CRITICAL LIVE TRIGGER FUNCTION
+  void _checkAndTriggerCallAlert(int ticketNumber, int currentServing, String brandName) {
+    // If the counter matches the user's turn and they haven't been notified yet
+    if (currentServing == ticketNumber && !_hasAlertedCalled) {
+      _hasAlertedCalled = true;
+
+      // Safe Frame Execution: Wait until the layout engine completes painting before throwing dialogs
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        // Clear snackbars to avoid visual clutter
+        ScaffoldMessenger.of(context).clearSnackBars();
+
+        // Option A: Clean, Premium Material Sticky Banner
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: const Color(0xFFBA1A1A), // High Alert Vibrant Crimson
+            margin: const EdgeInsets.all(16),
+            duration: const Duration(days: 1), // Persistent until user manually interacts
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+            content: Row(
+              children: [
+                const Icon(Icons.notification_important_rounded, color: Colors.white, size: 24),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: Column(
+                    mainAxisSize: MainAxisSize.min,
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        'Your Turn Has Arrived!',
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontWeight: FontWeight.w800,
+                          fontSize: 15,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 2),
+                      Text(
+                        'Ticket #$ticketNumber is called at $brandName.',
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontWeight: FontWeight.w500,
+                          fontSize: 13,
+                          color: Colors.white.withOpacity(0.9),
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+                const SizedBox(width: 8),
+        
+                // 🎯 THE COMPILER-PROOF DISMISS BUTTON:
+                // We style a normal text gesture right here inside the row, bypassing SnackBarAction completely!
+                GestureDetector(
+                  onTap: () => ScaffoldMessenger.of(context).hideCurrentSnackBar(),
+                  child: Container(
+                    padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                    child: const Text(
+                      'DISMISS',
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontWeight: FontWeight.w800,
+                        fontSize: 14,
+                        color: Colors.white,
+                        letterSpacing: 0.5,
+                      ),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      });
+    }
+  }
+
   Future<void> _findExistingActiveTicket() async {
     if (_isSearchingTicket) return;
     
@@ -110,6 +193,7 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
         _activeRestaurantId = ticketData['restaurantId'];
         _activeTicketNumber = ticketData['myTicketNumber'];
         _activeTicketId = ticketData['ticketId'];
+        _hasAlertedCalled = false;
         debugPrint('✅ [Queue Status View] Engine connected successfully! Active Ticket: #$_activeTicketNumber');
       } else {
         debugPrint('❌ [Queue Status View] Resetting loop: No matching live ticket detected.');
@@ -310,6 +394,8 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
           final int currentServing = state.queueData['current_serving'] ?? 0;
           final int peopleAhead = state.calculatePeopleAhead(streamTicketNumber);
           final double ringProgress = state.calculateProgressFactor(streamTicketNumber);
+
+          _checkAndTriggerCallAlert(streamTicketNumber, currentServing, brandName);
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),

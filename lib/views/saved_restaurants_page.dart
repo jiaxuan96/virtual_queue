@@ -17,6 +17,61 @@ class SavedRestaurantsPage extends StatefulWidget {
 class _SavedRestaurantsPageState extends State<SavedRestaurantsPage> {
   final SavedRestaurantsViewModel _viewModel = SavedRestaurantsViewModel();
 
+  // 🧠 History Tracker: Retains the previous frame snapshot array to calculate insertions or removals
+  List<RestaurantDisplayState>? _previousSavedList;
+
+  // 📣 POPUP BANNER TRIGGER: Evaluates state differentials safely after the engine completes a layout frame
+  void _evaluateDataChanges(List<RestaurantDisplayState> currentList) {
+    if (_previousSavedList == null) {
+      _previousSavedList = List.from(currentList);
+      return;
+    }
+
+    // 🏎️ Safe Execution Trap: Only trigger if the background database collection count actually changes
+    if (_previousSavedList!.length != currentList.length) {
+      final bool isAddition = currentList.length > _previousSavedList!.length;
+
+      WidgetsBinding.instance.addPostFrameCallback((_) {
+        if (!mounted) return;
+
+        // Clear existing active popups immediately to keep user interaction responsive
+        ScaffoldMessenger.of(context).clearSnackBars();
+
+        ScaffoldMessenger.of(context).showSnackBar(
+          SnackBar(
+            behavior: SnackBarBehavior.floating,
+            backgroundColor: isAddition ? const Color(0xFF064E3B) : const Color(0xFF334155),
+            margin: const EdgeInsets.all(16),
+            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
+            duration: const Duration(seconds: 2),
+            content: Row(
+              children: [
+                Icon(
+                  isAddition ? Icons.bookmark_added_rounded : Icons.bookmark_remove_rounded,
+                  color: Colors.white,
+                  size: 20,
+                ),
+                const SizedBox(width: 12),
+                Text(
+                  isAddition ? 'Saved restaurant!' : 'Unsaved restaurant',
+                  style: const TextStyle(
+                    fontFamily: 'Plus Jakarta Sans',
+                    fontWeight: FontWeight.w600,
+                    fontSize: 14,
+                    color: Colors.white,
+                  ),
+                ),
+              ],
+            ),
+          ),
+        );
+      });
+
+      // Commit the new snapshot list structure as the current historical baseline
+      _previousSavedList = List.from(currentList);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -52,6 +107,9 @@ class _SavedRestaurantsPageState extends State<SavedRestaurantsPage> {
           }
 
           final bookmarkedList = snapshot.data ?? [];
+
+          // 📡 Run data diff analysis in background before generating list subviews
+          _evaluateDataChanges(bookmarkedList);
 
           // 🚨 IF BOOKMARKS COLLECTION CONTAINER IS EMPTY, RENDER EMPTY STATE
           if (bookmarkedList.isEmpty) {
