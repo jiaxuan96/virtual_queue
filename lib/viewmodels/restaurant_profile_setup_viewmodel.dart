@@ -114,6 +114,7 @@ class RestaurantProfileSetupViewModel extends ChangeNotifier {
     required String restaurantBrandId,
     required String restaurantId,
     required File? imageFile,
+    String? address,
     required String phone,
     required Map<String, dynamic> openingHours,
     required int estimatedTime,
@@ -135,6 +136,7 @@ class RestaurantProfileSetupViewModel extends ChangeNotifier {
       await _restaurantService.updateRestaurantBranchProfile(
         restaurantBrandId: restaurantBrandId,
         restaurantId: restaurantId,
+        address: address,
         phone: phone,
         openingHours: openingHours,
         estimatedTime: estimatedTime,

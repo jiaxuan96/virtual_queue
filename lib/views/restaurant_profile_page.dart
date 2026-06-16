@@ -6,6 +6,7 @@ import 'package:virtual_queue/models/restaurant_model.dart';
 import 'package:virtual_queue/views/restaurant_profile_setup_page.dart';
 import 'package:virtual_queue/viewmodels/restaurant_profile_viewmodel.dart';
 import 'package:virtual_queue/views/login_page.dart';
+import 'package:virtual_queue/views/restaurant_profile_edit_page.dart';
 
 class RestaurantProfilePage extends StatefulWidget {
   final String restaurantId;
@@ -259,14 +260,14 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
               return Column(
                 children: [
                   SizedBox(
-                    height: 280,
+                    height: 330,
                     width: double.infinity,
                     child: Stack(
                       children: [
                         Image.network(
                           restaurant.imageUrl,
                           width: double.infinity,
-                          height: 280,
+                          height: 330,
                           fit: BoxFit.cover,
                           errorBuilder: (context, error, stackTrace) {
                             return Container(
@@ -347,12 +348,25 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
 
                         Positioned(
                           right: 25,
-                          bottom: 30,
-                          child: CircleAvatar(
-                            backgroundColor: Colors.white,
-                            child: Icon(
-                              Icons.edit,
-                              color: Color(0xFF006670),
+                          bottom: 40,
+                          child: InkWell(
+                            onTap: (){
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RestaurantProfileEditPage(
+                                    restaurantBrandId: widget.restaurantBrandId,
+                                    restaurantId: selectedRestaurantId
+                                  ),
+                                ),
+                              );
+                            },
+                            child: CircleAvatar(
+                              backgroundColor: Colors.white,
+                              child: Icon(
+                                Icons.edit,
+                                color: Color(0xFF006670),
+                              ),
                             ),
                           ),
                         ),
@@ -414,20 +428,6 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                                                   size: 40,
                                                 );
                                               },
-                                            ),
-                                          ),
-                                        ),
-
-                                        Positioned(
-                                          right: -4,
-                                          bottom: 5,
-                                          child: CircleAvatar(
-                                            radius: 16,
-                                            backgroundColor: Color(0xFF006670),
-                                            child: Icon(
-                                              Icons.camera_alt,
-                                              color: Colors.white,
-                                              size: 16,
                                             ),
                                           ),
                                         ),

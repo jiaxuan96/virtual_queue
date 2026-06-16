@@ -56,6 +56,7 @@ class RestaurantService {
   Future<void> updateRestaurantBranchProfile({
     required String restaurantBrandId,
     required String restaurantId,
+    String? address,
     required String phone,
     required Map<String, dynamic> openingHours,
     required int estimatedTime,
@@ -66,6 +67,10 @@ class RestaurantService {
       'opening_hours': openingHours,
       'estimated_time': estimatedTime,
     };
+
+    if (address != null) {
+      data['address'] = address;
+    }
 
     if (imageUrl.isNotEmpty) {
       data['image_url'] = imageUrl;
