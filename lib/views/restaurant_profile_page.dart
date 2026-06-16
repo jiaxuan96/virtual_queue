@@ -6,6 +6,7 @@ import 'package:virtual_queue/models/restaurant_model.dart';
 import 'package:virtual_queue/views/restaurant_profile_setup_page.dart';
 import 'package:virtual_queue/viewmodels/restaurant_profile_viewmodel.dart';
 import 'package:virtual_queue/views/login_page.dart';
+import 'package:virtual_queue/views/restaurant_profile_edit_page.dart';
 
 class RestaurantProfilePage extends StatefulWidget {
   final String restaurantId;
@@ -348,11 +349,24 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                         Positioned(
                           right: 25,
                           bottom: 30,
-                          child: CircleAvatar(
-                            backgroundColor: Colors.white,
-                            child: Icon(
-                              Icons.edit,
-                              color: Color(0xFF006670),
+                          child: InkWell(
+                            onTap: (){
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => RestaurantProfileEditPage(
+                                    restaurantBrandId: widget.restaurantBrandId,
+                                    restaurantId: selectedRestaurantId
+                                  ),
+                                ),
+                              );
+                            },
+                            child: CircleAvatar(
+                              backgroundColor: Colors.white,
+                              child: Icon(
+                                Icons.edit,
+                                color: Color(0xFF006670),
+                              ),
                             ),
                           ),
                         ),
