@@ -1,7 +1,6 @@
 import 'package:flutter/material.dart';
 import '../viewmodels/saved_restaurants_viewmodel.dart';
 import '../models/restaurant_display_state.dart';
-import '../models/restaurant_brand_model.dart';
 import 'restaurant_card_page.dart';
 
 class SavedRestaurantsPage extends StatefulWidget {
@@ -70,6 +69,43 @@ class _SavedRestaurantsPageState extends State<SavedRestaurantsPage> {
       // Commit the new snapshot list structure as the current historical baseline
       _previousSavedList = List.from(currentList);
     }
+  }
+
+  // Converts the opening_hours map from Firestore into readable text.
+  String _formatOpeningHours(Map<String, dynamic> openingHours) {
+    if (openingHours.isEmpty) {
+      return 'Opening hours not set';
+    }
+
+    final dayLabels = {
+      'monday': 'Mon',
+      'tuesday': 'Tue',
+      'wednesday': 'Wed',
+      'thursday': 'Thu',
+      'friday': 'Fri',
+      'saturday': 'Sat',
+      'sunday': 'Sun',
+    };
+
+    final lines = <String>[];
+
+    for (final entry in dayLabels.entries) {
+      final dayData = openingHours[entry.key];
+
+      if (dayData is! Map) continue;
+
+      final isOpen = dayData['is_open'] == true;
+      final open = dayData['open'] ?? '';
+      final close = dayData['close'] ?? '';
+
+      if (!isOpen) {
+        lines.add('${entry.value}: Closed');
+      } else {
+        lines.add('${entry.value}: $open - $close');
+      }
+    }
+
+    return lines.isEmpty ? 'Opening hours not set' : lines.join('\n');
   }
 
   @override
@@ -177,7 +213,7 @@ class _SavedRestaurantsPageState extends State<SavedRestaurantsPage> {
     final String brandName = cardState.brand.name;
     final String branchName = cardState.restaurant.branchName;
     final String cuisineText = cardState.brand.cuisine.isNotEmpty ? cardState.brand.cuisine : 'Local';
-    final String openingHours = cardState.restaurant.openingHours;
+    final String openingHours = _formatOpeningHours(cardState.restaurant.openingHours);
     
     // Dynamic asset image conversion
     final String assetName = brandName.replaceAll(' ', '_');
