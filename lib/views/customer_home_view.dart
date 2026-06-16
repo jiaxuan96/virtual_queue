@@ -1,7 +1,9 @@
 import 'package:flutter/material.dart';
+import '../models/restaurant_display_state.dart';
 import '../viewmodels/customer_home_viewmodel.dart';
 import 'restaurant_card_page.dart'; 
 import 'queue_status_page.dart'; 
+import 'user_profile_view.dart';
 
 class CustomerHomeView extends StatefulWidget {
   const CustomerHomeView({super.key});
@@ -16,37 +18,28 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
   String? activeRestaurantId;
   int? activeTicketNumber;
 
+  // 🔄 Callback helper to handle state transitions cleanly
+  void _updateQueueState(String restId, int ticketNum) {
+    setState(() {
+      activeRestaurantId = restId;
+      activeTicketNumber = ticketNum;
+      _currentIndex = 1; // Auto-route user straight to the active Queue tab
+    });
+  }
+
   @override
   Widget build(BuildContext context) {
-    // List of structural master pages mapped to navigation tab indices
-    final List<Widget> tabs = [
-      // ✅ FIXED: Passing down the state modifier function into the Explore Sub-Widget Container
-      ExploreTabContent(
-        onQueueRegisteredInChild: (restId, ticketNum) {
-          setState(() {
-            activeRestaurantId = restId;
-            activeTicketNumber = ticketNum;
-            _currentIndex = 1;
-          });
-        },
-      ),
+    // 🛠️ FIX: We keep the tabs structure inside a dynamically evaluated array 
+    // but pass live state down explicitly every build run.
+    final List<Widget> structuralTabs = [
+      ExploreTabContent(onQueueRegisteredInChild: _updateQueueState),
       
-      // Dynamically switches layout based on whether they have an active ticket
-      activeTicketNumber != null 
-        ? QueueStatusPage(
-            restaurantId: activeRestaurantId!,
-            myTicketNumber: activeTicketNumber!,
-            ticketId: '',
-          )
-        : const Center(
-            child: Text(
-              'You are not currently in any queue line.',
-              style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 16, color: Color(0xFF6E797B)),
-            ),
-          ),
+      // The Queue View block now remains consistently tracked by the underlying engine
+      _buildQueueTabContent(),
+      // const QueueStatusPage(),
           
       const Center(child: Text('Reservations Page Coming Soon')),
-      const Center(child: Text('Profile Settings Page Coming Soon')),
+      const UserProfileView(),
     ];
 
     return Scaffold(
@@ -56,7 +49,7 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
         bottom: false,
         child: IndexedStack(
           index: _currentIndex,
-          children: tabs,
+          children: structuralTabs, // 👈 Consuming the stable stack structures
         ),
       ),
 
@@ -89,6 +82,27 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
           ],
         ),
       ),
+    );
+  }
+
+  // 🛠️ CRITICAL FIX: Separates structural initialization from render conditions
+  Widget _buildQueueTabContent() {
+    // If the home view already has the variables in memory, pass them down immediately
+    if (activeTicketNumber != null && activeRestaurantId != null) {
+      return QueueStatusPage(
+        key: ValueKey(activeTicketNumber), 
+        restaurantId: activeRestaurantId!,
+        myTicketNumber: activeTicketNumber!,
+        ticketId: '',
+      );
+    }
+    
+    // 🚀 THE RESCUE PATHWAY: If variables are null on fresh login, 
+    // STILL return the QueueStatusPage so its internal fallback engine can fetch the active ticket!
+    return const QueueStatusPage(
+      restaurantId: null,
+      myTicketNumber: null,
+      ticketId: null,
     );
   }
 
@@ -152,6 +166,65 @@ class ExploreTabContent extends StatefulWidget {
 
 class _ExploreTabContentState extends State<ExploreTabContent> {
   final CustomerHomeViewModel _viewModel = CustomerHomeViewModel();
+  final TextEditingController _searchController = TextEditingController();
+
+  // List<RestaurantDisplayState> _allRestaurants = [];
+  // List<RestaurantDisplayState> _filteredRestaurants = [];
+  // bool _isSearching = false;
+
+  final ValueNotifier<bool> _isSearchingNotifier = ValueNotifier<bool>(false);
+  String? _selectedCategory;
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      final String text = _searchController.text;
+      _viewModel.updateSearchQuery(text);
+      _isSearchingNotifier.value = text.trim().isNotEmpty;
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    _isSearchingNotifier.dispose();
+    _viewModel.dispose();
+    super.dispose();
+  }
+
+  // String? _selectedCategory;
+
+  // 🚀 SEARCH FILTER ENGINE
+  // void _onSearchChanged() {
+  //   final String query = _searchController.text.trim().toLowerCase();
+
+  //   if (query.isEmpty) {
+  //     setState(() {
+  //       _isSearching = false;
+  //       _filteredRestaurants = List.from(_allRestaurants);
+  //     });
+  //     return;
+  //   }
+
+  //   setState(() {
+  //     _isSearching = true;
+  //     _filteredRestaurants = _allRestaurants.where((restaurantItem) {
+  //       // Extracting values
+  //       final String name = (restaurantItem.brand.name ?? '').toLowerCase();
+  //       final String cuisine = (restaurantItem.brand.cuisine ?? '').toLowerCase();
+  //       final String branch = (restaurantItem.restaurant.branchName ?? '').toLowerCase();
+        
+  //       // 🖨️ THE DIAGNOSTIC LOG: This prints the exact strings the app is searching through!
+  //       // debugPrint('🔎 [SEARCHING] User Typed: "$query"');
+  //       // debugPrint('   ├── Brand Name found in Model: "$name"');
+  //       // debugPrint('   ├── Cuisine Type found in Model: "$cuisine"');
+  //       // debugPrint('   └── Branch Name found in Model: "$branch"');
+
+  //       return name.contains(query) || cuisine.contains(query) || branch.contains(query);
+  //     }).toList();
+  //   });
+  // }
 
   String _formatOpeningHours(Map<String, dynamic> openingHours) {
     if (openingHours.isEmpty) {
@@ -212,7 +285,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
             children: [
               IconButton(
                 padding: EdgeInsets.zero,
-                icon: const Icon(Icons.menu_rounded, color: Color(0xFF115E59), size: 24),
+                icon: const Icon(Icons.menu_rounded, color: Color.fromARGB(0, 17, 94, 89), size: 24),
                 onPressed: () {},
               ),
               const Text(
@@ -249,7 +322,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
             _buildSearchSection(),
             const SizedBox(height: 32),
             _buildCategoriesSection(),
-            const SizedBox(height: 32),
+            const SizedBox(height: 12),
             const Text(
               'Restaurants',
               style: TextStyle(
@@ -272,6 +345,71 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
             ),
             const SizedBox(height: 24),
 
+            // StreamBuilder<List<RestaurantDisplayState>>(
+            //   stream: _viewModel.restaurantCardsStream,
+            //   builder: (context, snapshot) {
+            //     if (snapshot.connectionState == ConnectionState.waiting) {
+            //       return const Center(
+            //         child: Padding(
+            //           padding: EdgeInsets.only(top: 40.0),
+            //           child: CircularProgressIndicator(color: Color(0xFF006670)),
+            //         ),
+            //       );
+            //     }
+            //     if (!snapshot.hasData || snapshot.data!.isEmpty) {
+            //       return _buildEmptyState();
+            //     }
+
+            //     _allRestaurants = snapshot.data!;
+            //     if (!_isSearching) {
+            //       _filteredRestaurants = List.from(_allRestaurants);
+            //     }
+
+            //     if (_filteredRestaurants.isEmpty) {
+            //       return Center(
+            //         child: Padding(
+            //           padding: const EdgeInsets.only(top: 40.0),
+            //           child: Text(
+            //             'No matching locations found.',
+            //             style: TextStyle(fontFamily: 'Plus Jakarta Sans', color: Colors.grey[600]),
+            //           ),
+            //         ),
+            //       );
+            //     }
+
+            //     return ListView.builder(
+            //       shrinkWrap: true,
+            //       physics: const NeverScrollableScrollPhysics(),
+            //       itemCount: _filteredRestaurants.length,
+            //       itemBuilder: (context, index) {
+            //         final restaurantItem = _filteredRestaurants[index];
+            //         return GestureDetector(
+            //           onTap: () async {
+            //             final returnedResult = await Navigator.push(
+            //               context,
+            //               MaterialPageRoute(
+            //                 builder: (context) => RestaurantCardPage(
+            //                   brandId: restaurantItem.queue.brandId ?? '',       
+            //                   restaurantId: restaurantItem.queue.restaurantId ?? '', 
+            //                 ),
+            //               ),
+            //             );
+
+            //             if (returnedResult != null && returnedResult is int) {
+            //               widget.onQueueRegisteredInChild(
+            //                 restaurantItem.queue.restaurantId ?? '',
+            //                 returnedResult,
+            //               );
+            //             }
+            //           },
+            //           child: _buildRestaurantCard(context, restaurantItem),
+            //         );
+            //       },
+            //     );
+            //   },
+            // ),
+
+            // 🎯 THE LIVE COMBINED-FILTER FEED (Handled cleanly via business layer)
             StreamBuilder<List<RestaurantDisplayState>>(
               stream: _viewModel.restaurantCardsStream,
               builder: (context, snapshot) {
@@ -284,16 +422,51 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                   );
                 }
                 if (!snapshot.hasData || snapshot.data!.isEmpty) {
-                  return _buildEmptyState();
+                  return Center(
+                    child: Padding(
+                      padding: const EdgeInsets.only(top: 40.0),
+                      child: Text(
+                        'No matching locations found.',
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans', 
+                          fontSize: 16,
+                          fontWeight: FontWeight.w500,
+                          color: Colors.grey[600]
+                        ),
+                      ),
+                    ),
+                  );
                 }
 
-                final cardStates = snapshot.data!;
+                final List<RestaurantDisplayState> displayCards = snapshot.data!;
+
                 return ListView.builder(
                   shrinkWrap: true,
                   physics: const NeverScrollableScrollPhysics(),
-                  itemCount: cardStates.length,
+                  itemCount: displayCards.length,
                   itemBuilder: (context, index) {
-                    return _buildRestaurantCard(context, cardStates[index]);
+                    final restaurantItem = displayCards[index];
+                    return GestureDetector(
+                      onTap: () async {
+                        final returnedResult = await Navigator.push(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => RestaurantCardPage(
+                              brandId: restaurantItem.queue.brandId ?? '',       
+                              restaurantId: restaurantItem.queue.restaurantId ?? '', 
+                            ),
+                          ),
+                        );
+
+                        if (returnedResult != null && returnedResult is int) {
+                          widget.onQueueRegisteredInChild(
+                            restaurantItem.queue.restaurantId ?? '',
+                            returnedResult,
+                          );
+                        }
+                      },
+                      child: _buildRestaurantCard(context, restaurantItem),
+                    );
                   },
                 );
               },
@@ -312,19 +485,34 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
         color: const Color(0xFFDFE3E4),
         borderRadius: BorderRadius.circular(12),
       ),
-      child: const TextField(
+      child: TextField(
+        controller: _searchController,
+        style: const TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 16),
         decoration: InputDecoration(
           hintText: 'Search for restaurants, cuisines...',
-          hintStyle: TextStyle(
+          hintStyle: const TextStyle(
             fontFamily: 'Plus Jakarta Sans',
             fontSize: 16,
             fontWeight: FontWeight.w400,
             color: Color(0xFF3E494B),
           ),
-          prefixIcon: Icon(Icons.search_rounded, color: Color(0xFF6E797B), size: 18),
-          suffixIcon: Icon(Icons.tune_rounded, color: Color(0xFF006670), size: 18),
+          prefixIcon: const Icon(Icons.search_rounded, color: Color(0xFF6E797B), size: 18),
+          suffixIcon: ValueListenableBuilder<bool>(
+            valueListenable: _isSearchingNotifier,
+            builder: (context, isSearching, child) {
+              return isSearching
+                  ? IconButton(
+                      icon: const Icon(Icons.close_rounded, color: Color(0xFF3E494B), size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        FocusScope.of(context).unfocus();
+                      },
+                    )
+                  : const Icon(Icons.tune_rounded, color: Color(0xFF006670), size: 18);
+            },
+          ),
           border: InputBorder.none,
-          contentPadding: EdgeInsets.symmetric(vertical: 18),
+          contentPadding: const EdgeInsets.symmetric(vertical: 16),
         ),
       ),
     );
@@ -356,7 +544,12 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
               ),
             ),
             GestureDetector(
-              onTap: () {},
+              onTap: () {
+                setState(() {
+                  _selectedCategory = null;
+                });
+                _viewModel.applyCuisineFilter(null);
+              },
               child: const Text(
                 'See all',
                 style: TextStyle(
@@ -371,40 +564,59 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
         ),
         const SizedBox(height: 16),
         SizedBox(
-          height: 100,
+          height: 104, 
           child: ListView.builder(
             scrollDirection: Axis.horizontal,
             physics: const BouncingScrollPhysics(),
             itemCount: categories.length,
             itemBuilder: (context, index) {
+              final String currentLabel = categories[index]['label'] as String;
+              final bool isSelected = _selectedCategory == currentLabel;
+
               return Padding(
                 padding: const EdgeInsets.only(right: 16.0),
-                child: Column(
-                  children: [
-                    Container(
-                      width: 64,
-                      height: 64,
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFF0F4F5),
-                        borderRadius: BorderRadius.circular(16),
+                child: GestureDetector(
+                  onTap: () {
+                    setState(() {
+                      if (isSelected) {
+                        _selectedCategory = null; 
+                      } else {
+                        _selectedCategory = currentLabel; 
+                      }
+                      _viewModel.applyCuisineFilter(_selectedCategory);
+                    });
+                  },
+                  child: Column(
+                    children: [
+                      AnimatedContainer(
+                        duration: const Duration(milliseconds: 200),
+                        width: 64,
+                        height: 64,
+                        decoration: BoxDecoration(
+                          color: isSelected ? const Color(0xFF006670) : const Color(0xFFF0F4F5),
+                          borderRadius: BorderRadius.circular(16),
+                          border: isSelected 
+                              ? Border.all(color: const Color(0xFF006670), width: 1)
+                              : Border.all(color: Colors.transparent, width: 1),
+                        ),
+                        child: Icon(
+                          categories[index]['icon'] as IconData,
+                          color: isSelected ? Colors.white : const Color(0xFF006670),
+                          size: 24,
+                        ),
                       ),
-                      child: Icon(
-                        categories[index]['icon'] as IconData,
-                        color: const Color(0xFF006670),
-                        size: 24,
+                      const SizedBox(height: 8),
+                      Text(
+                        currentLabel,
+                        style: TextStyle(
+                          fontFamily: 'Plus Jakarta Sans',
+                          fontSize: 14,
+                          fontWeight: isSelected ? FontWeight.w700 : FontWeight.w500,
+                          color: isSelected ? const Color(0xFF006670) : const Color(0xFF3E494B),
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 8),
-                    Text(
-                      categories[index]['label'] as String,
-                      style: const TextStyle(
-                        fontFamily: 'Plus Jakarta Sans',
-                        fontSize: 14,
-                        fontWeight: FontWeight.w500,
-                        color: Color(0xFF3E494B),
-                      ),
-                    ),
-                  ],
+                    ],
+                  ),
                 ),
               );
             },
@@ -465,7 +677,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                 color: const Color(0xFFECEFF1),
                 image: DecorationImage(
                   image: AssetImage('assets/images/$assetName.png'), 
-                  onError: (exception, stackTrace) => const AssetImage('assets/images/Oriental_Kopi.png'),
+                  onError: (exception, stackTrace) => const AssetImage('assets/images/Restaurant_Icon.png'),
                   fit: BoxFit.cover,
                 ),
               ),

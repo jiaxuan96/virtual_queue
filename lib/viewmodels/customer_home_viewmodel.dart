@@ -1,83 +1,114 @@
-import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:rxdart/rxdart.dart';
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:flutter/material.dart';
+import '../models/restaurant_display_state.dart';
 import '../models/restaurant_model.dart';
 import '../models/restaurant_brand_model.dart';
-import '../models/restaurant_queue_model.dart'; // Imported your model!
-
-class RestaurantDisplayState {
-  final RestaurantModel restaurant;
-  final RestaurantBrandModel brand;
-  final RestaurantQueueModel queue; // Holds your updated model instance
-  final int queueLength;
-  final String badgeText;
-  final Color badgeBgColor;
-  final Color badgeTextColor;
-
-  RestaurantDisplayState({
-    required this.restaurant,
-    required this.brand,
-    required this.queue,
-    required this.queueLength,
-    required this.badgeText,
-    required this.badgeBgColor,
-    required this.badgeTextColor,
-  });
-}
+import '../models/restaurant_queue_model.dart';
 
 class CustomerHomeViewModel {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
 
+  // 🎯 Track both the Category Selection AND Text Search Inputs
+  final BehaviorSubject<String?> _filterSubject = BehaviorSubject<String?>.seeded(null);
+  final BehaviorSubject<String> _searchQuerySubject = BehaviorSubject<String>.seeded('');
+
+  // UI inputs hook here
+  void applyCuisineFilter(String? cuisine) {
+    debugPrint('⚡ [ViewModel] UI requested category change to: "$cuisine"');
+    _filterSubject.add(cuisine); 
+  }
+
+  void updateSearchQuery(String query) {
+    _searchQuerySubject.add(query);
+  }
+
+  /// 🎧 UNIFIED REAL-TIME STREAM PIPELINE: Reacts to text queries, category choices, and DB edits!
   Stream<List<RestaurantDisplayState>> get restaurantCardsStream {
-    return _firestore.collection('queues').snapshots().asyncMap((queueSnapshot) async {
-      List<RestaurantDisplayState> displayCards = [];
+    return Rx.combineLatest3<String?, String, QuerySnapshot, Stream<List<RestaurantDisplayState>>>(
+      _filterSubject.stream,
+      _searchQuerySubject.stream,
+      _firestore.collection('restaurant_brands').snapshots(),
+      (activeCuisine, activeSearchText, brandSnapshot) {
+        return Stream.fromFuture(_fetchAndFilterDisplayStates(activeCuisine, activeSearchText, brandSnapshot));
+      },
+    ).flatMap((stream) => stream);
+  }
 
-      for (var queueDoc in queueSnapshot.docs) {
-        try {
-          final queueData = queueDoc.data();
-          
-          // 1. Instantiate your queue model directly
-          final queueModel = RestaurantQueueModel.fromMap(queueData, queueDoc.id);
+  /// Deep pipeline data hydrator and filtering processor
+  Future<List<RestaurantDisplayState>> _fetchAndFilterDisplayStates(
+    String? activeCuisineFilter, 
+    String searchText,
+    QuerySnapshot brandSnapshot,
+  ) async {
+    List<RestaurantDisplayState> displayCards = [];
+    final String cleanSearchText = searchText.trim().toLowerCase();
 
-          // 2. Extract structural look-ups 
-          final String brandId = queueModel.brandId;
-          final String restaurantId = queueModel.restaurantId;
+    for (var brandDoc in brandSnapshot.docs) {
+      try {
+        final brandData = brandDoc.data() as Map<String, dynamic>;
+        final brandModel = RestaurantBrandModel.fromMap(brandData);
+        final String brandId = brandDoc.id;
 
-          if (brandId.isEmpty || restaurantId.isEmpty) {
-            debugPrint('⚠️ Skipped Queue Doc [${queueDoc.id}]: Missing brand_id reference links inside document mapping entries.');
-            continue;
-          }
-
-          // 3. Fetch Parent Brand Profile Document 
-          final brandDoc = await _firestore
-              .collection('restaurant_brands')
-              .doc(brandId)
-              .get();
-
-          // 4. Fetch Child Branch Document inside the subcollection
-          final restaurantDoc = await _firestore
-              .collection('restaurant_brands')
-              .doc(brandId)
-              .collection('restaurants')
-              .doc(restaurantId)
-              .get();
-
-          if (brandDoc.exists && restaurantDoc.exists) {
-            final brandModel = RestaurantBrandModel.fromMap(brandDoc.data()!);
-            final restaurantModel = RestaurantModel.fromMap(restaurantDoc.data()!);
-
-            // 5. Build presentation state utilizing your built-in model calculations
-            final cardState = _calculateCardPresentation(restaurantModel, brandModel, queueModel);
-            displayCards.add(cardState);
-          } else {
-            debugPrint('❌ Missing subcollection files on server side for Brand: $brandId, Branch: $restaurantId');
-          }
-        } catch (error) {
-          debugPrint('🚨 Core loop error hydrater execution line fail: $error');
+        // 🎯 1. CUISINE CATEGORY FILTER ENGINE
+        if (activeCuisineFilter != null) {
+          final String dbCuisine = (brandData['cuisine'] ?? '').toString().trim().toLowerCase();
+          final String selectedCuisine = activeCuisineFilter.trim().toLowerCase();
+          if (dbCuisine != selectedCuisine) continue; 
         }
-      }
 
-      return displayCards;
-    });
+        // Fetch children restaurant branches
+        Query restaurantCollectionRef = _firestore
+            .collection('restaurant_brands')
+            .doc(brandId)
+            .collection('restaurants');
+
+        final restaurantQuery = await restaurantCollectionRef.get();
+
+        for (var restaurantDoc in restaurantQuery.docs) {
+          final String restaurantId = restaurantDoc.id;
+          final restaurantModel = RestaurantModel.fromMap(restaurantDoc.data() as Map<String, dynamic>);
+
+          // 🎯 2. REAL-TIME TEXT SEARCH FILTERING
+          // Verifies if the user's query string maps to either the brand title or cuisine categorization tag strings
+          if (cleanSearchText.isNotEmpty) {
+            final String brandName = (brandModel.name ?? '').isNotEmpty 
+                ? brandModel.name!.toLowerCase() 
+                : (brandData['name'] ?? brandData['brand_id'] ?? '').toString().toLowerCase();
+            final String cuisineType = (brandModel.cuisine ?? '').toLowerCase();
+            final String branchName = (restaurantModel.branchName ?? '').toLowerCase(); // Fallback if applicable
+
+            final bool matchesSearch = brandName.contains(cleanSearchText) || 
+                                       cuisineType.contains(cleanSearchText) ||
+                                       branchName.contains(cleanSearchText);
+            
+            if (!matchesSearch) continue; // Skip card item entry mapping loops
+          }
+
+          // 🟢 3. FETCH LIVE QUEUES
+          final queueDoc = await _firestore.collection('queues').doc(restaurantId).get();
+
+          RestaurantQueueModel queueModel;
+          if (queueDoc.exists) {
+            queueModel = RestaurantQueueModel.fromMap(queueDoc.data()!, queueDoc.id);
+          } else {
+            queueModel = RestaurantQueueModel.fromMap({
+              'brand_id': brandId,
+              'restaurant_id': restaurantId,
+              'current_serving': 0,
+              'next_available_number': 1,
+            }, restaurantId);
+          }
+
+          final cardState = _calculateCardPresentation(restaurantModel, brandModel, queueModel);
+          displayCards.add(cardState);
+        }
+      } catch (e) {
+        debugPrint('🚨 Processing engine subcollection pipeline failure: $e');
+      }
+    }
+    return displayCards;
   }
 
   RestaurantDisplayState _calculateCardPresentation(
@@ -85,31 +116,13 @@ class CustomerHomeViewModel {
     RestaurantBrandModel brand,
     RestaurantQueueModel queue,
   ) {
-    // Utilize your exact native queue calculations!
     final int currentQueueLength = queue.queueLength;
-    final String statusString = queue.waitStatus;
+    final String statusString = currentQueueLength == 0 ? 'No waiting' : queue.waitStatus;
 
-    // Set colors based on your native model wait statuses
     Color badgeBgColor = const Color(0xFF008645); 
-    Color badgeTextColor = const Color(0xFFFFFFFF);
-
-    // if (statusString == 'Short wait') {
-    //   badgeBgColor = const Color(0xFFF39850); 
-    // } else if (statusString == 'Moderate') {
-    //   badgeBgColor = const Color(0xFFFF7890);
-    // } else if (statusString == 'Busy') {
-    //   badgeBgColor = const Color(0xFFBA1A1A); 
-    // }
-
-    if (statusString == 'No waiting') {
-      badgeBgColor = const Color(0xFF008645); // Deep Green
-    } else if (statusString == 'Short wait') {
-      badgeBgColor = const Color(0xFFF39850); // Warning Amber
-    } else if (statusString == 'Moderate') {
-      badgeBgColor = const Color(0xFFFF7890); // Soft Coral/Pink
-    } else if (statusString == 'Busy') {
-      badgeBgColor = const Color(0xFFBA1A1A); // Alert Crimson Red
-    }
+    if (statusString == 'Short wait') badgeBgColor = const Color(0xFFF39850); 
+    if (statusString == 'Moderate') badgeBgColor = const Color(0xFFFF7890); 
+    if (statusString == 'Busy') badgeBgColor = const Color(0xFFBA1A1A); 
 
     return RestaurantDisplayState(
       restaurant: restaurant,
@@ -118,7 +131,12 @@ class CustomerHomeViewModel {
       queueLength: currentQueueLength,
       badgeText: statusString,
       badgeBgColor: badgeBgColor,
-      badgeTextColor: badgeTextColor,
+      badgeTextColor: Colors.white,
     );
+  }
+
+  void dispose() {
+    _filterSubject.close();
+    _searchQuerySubject.close();
   }
 }
