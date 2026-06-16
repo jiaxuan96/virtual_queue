@@ -119,6 +119,42 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
     }
   }
 
+  String _formatOpeningHours(dynamic openingHours) {
+    if (openingHours is! Map || openingHours.isEmpty) {
+      return 'Hours Not Available';
+    }
+
+    final dayLabels = {
+      'monday': 'Mon',
+      'tuesday': 'Tue',
+      'wednesday': 'Wed',
+      'thursday': 'Thu',
+      'friday': 'Fri',
+      'saturday': 'Sat',
+      'sunday': 'Sun',
+    };
+
+    final lines = <String>[];
+
+    for (final entry in dayLabels.entries) {
+      final dayData = openingHours[entry.key];
+
+      if (dayData is! Map) continue;
+
+      final isOpen = dayData['is_open'] == true;
+      final open = dayData['open'] ?? '';
+      final close = dayData['close'] ?? '';
+
+      if (!isOpen) {
+        lines.add('${entry.value}: Closed');
+      } else {
+        lines.add('${entry.value}: $open - $close');
+      }
+    }
+
+    return lines.isEmpty ? 'Hours Not Available' : lines.join('\n');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -151,7 +187,8 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
           final String brandName = state.brandData['name'] ?? 'Loading Restaurant...';
           final String branchName = state.restaurantData['branch_name'] ?? '';
           final String cuisineText = state.brandData['cuisine'] ?? 'Local Cuisine';
-          final String openingHours = state.restaurantData['opening_hours'] ?? 'Hours Not Available';
+          final openingHoursData = state.restaurantData['opening_hours'];
+          final String openingHours = _formatOpeningHours(openingHoursData);
           final String addressText = state.restaurantData['address'] ?? 'No Address Listed';
           final String phoneText = state.restaurantData['phone'] ?? 'No Contact Phone';
           final String descriptionText = state.brandData['about'] ?? 'No description provided.';

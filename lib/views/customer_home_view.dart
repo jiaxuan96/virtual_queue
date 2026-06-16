@@ -226,6 +226,48 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
   //   });
   // }
 
+  String _formatOpeningHours(Map<String, dynamic> openingHours) {
+    if (openingHours.isEmpty) {
+      return 'Opening hours not set';
+    }
+
+    final dayLabels = {
+      'monday': 'Mon',
+      'tuesday': 'Tue',
+      'wednesday': 'Wed',
+      'thursday': 'Thu',
+      'friday': 'Fri',
+      'saturday': 'Sat',
+      'sunday': 'Sun',
+    };
+
+    final lines = <String>[];
+
+    for (final entry in dayLabels.entries) {
+      final dayKey = entry.key;
+      final dayLabel = entry.value;
+      final dayData = openingHours[dayKey];
+
+      if (dayData is! Map) continue;
+
+      final isOpen = dayData['is_open'] == true;
+      final open = dayData['open'] ?? '';
+      final close = dayData['close'] ?? '';
+
+      if (!isOpen) {
+        lines.add('$dayLabel: Closed');
+      } else {
+        lines.add('$dayLabel: $open - $close');
+      }
+    }
+
+    if (lines.isEmpty) {
+      return 'Opening hours not set';
+    }
+
+    return lines.join('\n');
+  }
+
   @override
   Widget build(BuildContext context) {
     return Scaffold(
@@ -723,7 +765,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                             const Icon(Icons.access_time_rounded, color: Color(0xFFF39850), size: 14),
                             const SizedBox(width: 6),
                             Text(
-                              cardState.restaurant.openingHours, 
+                              _formatOpeningHours(cardState.restaurant.openingHours),
                               style: const TextStyle(
                                 fontFamily: 'Plus Jakarta Sans',
                                 fontSize: 13,
