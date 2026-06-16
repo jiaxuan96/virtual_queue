@@ -23,6 +23,19 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
 
   late String selectedRestaurantId;
 
+  bool _isProfileSetupComplete(
+      RestaurantBrandModel brand,
+      RestaurantModel restaurant,
+      ) {
+    return brand.cuisine.isNotEmpty &&
+        brand.about.isNotEmpty &&
+        brand.logoUrl.isNotEmpty &&
+        restaurant.phone.isNotEmpty &&
+        restaurant.openingHours.isNotEmpty &&
+        restaurant.estimatedTime > 0 &&
+        restaurant.imageUrl.isNotEmpty;
+  }
+
   @override
   void initState() {
     super.initState();
@@ -37,133 +50,164 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
         children: [
           _buildHeader(),
           Expanded(
-            child: StreamBuilder<RestaurantQueueModel>(
-              stream: viewmodel.watchQueue(selectedRestaurantId),
-              builder: (context, snapshot) {
-                if (!snapshot.hasData) {
+            child: StreamBuilder<RestaurantBrandModel>(
+              stream: viewmodel.watchRestaurantBrand(widget.restaurantBrandId),
+              builder: (context, brandSnapshot) {
+                if (!brandSnapshot.hasData) {
                   return const Center(child: CircularProgressIndicator());
                 }
-                final queue = snapshot.data!;
+                final brand = brandSnapshot.data!;
 
-                return Padding(
-                  padding: const EdgeInsets.all(25.0),
-                  child: Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      Text(
-                        'Queue Management',
-                        style: TextStyle(
-                          fontWeight: FontWeight(1000),
-                          color: Color(0xFF006670),
-                          fontSize: 25,
-                        ),
-                      ),
-                      SizedBox(height: 20),
-                      _buildAvailabilityToggle(),
-                      Container(
-                        width: double.infinity,
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                          color: Color(0xFFF0F4F5),
-                          borderRadius: BorderRadius.circular(20),
-                          border: const Border(
-                            left: BorderSide(color: Color(0xFF006670), width: 8),
-                          ),
-                          boxShadow: [
-                            BoxShadow(
-                              color: Colors.black.withValues(alpha: 0.25),
-                              blurRadius: 5,
-                              offset: const Offset(2, 2),
-                            ),
-                          ],
-                        ),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            Text(
-                              '# ${queue.currentServing}',
-                              style: TextStyle(
-                                fontWeight: FontWeight.bold,
-                                fontSize: 40,
-                              ),
-                            ),
-                            Text(
-                              'Now Serving',
-                              style: TextStyle(
-                                color: Color(0xFF777777),
-                                fontSize: 16,
-                              ),
-                            ),
-                            Divider(height: 32),
-                            Align(
-                              alignment: Alignment.centerRight,
-                              child: ElevatedButton.icon(
-                                style: ElevatedButton.styleFrom(
-                                  backgroundColor: Color(0xFF006670),
-                                  padding: const EdgeInsets.only(left: 20, top: 10, right: 20, bottom: 10),
-                                ),
-                                onPressed: (){
-                                  viewmodel.callNextCustomer(selectedRestaurantId);
-                                },
-                                icon: const Icon(
-                                  Icons.notifications,
-                                  color: Color(0xFFFFFFFF),
-                                  size: 20,
-                                ),
-                                label: const Text(
-                                  'Call Next',
-                                  style: TextStyle(
-                                    color: Color(0xFFFFFFFF),
-                                    fontWeight: FontWeight.bold,
-                                    fontSize: 20,
-                                  ),
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                      SizedBox(height: 30),
-                      Container(
-                        padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFFDDF1F2),
-                          borderRadius: BorderRadius.circular(16),
-                        ),
-                        child: Row(
-                          children: [
-                            Text(
-                              '${queue.queueLength}',
-                              style: const TextStyle(
-                                fontSize: 35,
-                                fontWeight: FontWeight(1000),
-                              ),
-                            ),
-                            const SizedBox(width: 10),
-                            const Text(
-                              'Tables in Queue',
-                              style: TextStyle(fontWeight: FontWeight.bold),
-                            ),
-                            const Spacer(),
-                            Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                              decoration: BoxDecoration(
-                                color: const Color(0xFFF39850),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Text(
-                                queue.waitStatus,
-                                style: const TextStyle(
-                                  color: Colors.white,
-                                  fontWeight: FontWeight.bold,
-                                ),
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
+                return StreamBuilder<RestaurantModel>(
+                  stream: viewmodel.watchRestaurantBranch(
+                    widget.restaurantBrandId,
+                    selectedRestaurantId,
                   ),
+                  builder: (context, restaurantSnapshot){
+                    if(!restaurantSnapshot.hasData){
+                      return const Center(
+                        child: CircularProgressIndicator(),
+                      );
+                    }
+                    final restaurant = restaurantSnapshot.data!;
+
+                    if (!_isProfileSetupComplete(brand, restaurant)) {
+                      return _buildSetupRequiredMessage();
+                    }
+
+                    return StreamBuilder<RestaurantQueueModel>(
+                      stream: viewmodel.watchQueue(selectedRestaurantId),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Center(
+                              child: CircularProgressIndicator());
+                        }
+
+                        final queue = snapshot.data!;
+
+                        return Padding(
+                          padding: const EdgeInsets.all(25.0),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            children: [
+                              Text(
+                                'Queue Management',
+                                style: TextStyle(
+                                  fontWeight: FontWeight(1000),
+                                  color: Color(0xFF006670),
+                                  fontSize: 25,
+                                ),
+                              ),
+                              SizedBox(height: 20),
+                              _buildAvailabilityToggle(),
+                              Container(
+                                width: double.infinity,
+                                padding: const EdgeInsets.all(20),
+                                decoration: BoxDecoration(
+                                  color: Color(0xFFF0F4F5),
+                                  borderRadius: BorderRadius.circular(20),
+                                  border: const Border(
+                                    left: BorderSide(color: Color(0xFF006670), width: 8),
+                                  ),
+                                  boxShadow: [
+                                    BoxShadow(
+                                      color: Colors.black.withValues(alpha: 0.25),
+                                      blurRadius: 5,
+                                      offset: const Offset(2, 2),
+                                    ),
+                                  ],
+                                ),
+                                child: Column(
+                                  crossAxisAlignment: CrossAxisAlignment.start,
+                                  children: [
+                                    Text(
+                                      '# ${queue.currentServing}',
+                                      style: TextStyle(
+                                        fontWeight: FontWeight.bold,
+                                        fontSize: 40,
+                                      ),
+                                    ),
+                                    Text(
+                                      'Now Serving',
+                                      style: TextStyle(
+                                        color: Color(0xFF777777),
+                                        fontSize: 16,
+                                      ),
+                                    ),
+                                    Divider(height: 32),
+                                    Align(
+                                      alignment: Alignment.centerRight,
+                                      child: ElevatedButton.icon(
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: Color(0xFF006670),
+                                          padding: const EdgeInsets.only(left: 20, top: 10, right: 20, bottom: 10),
+                                        ),
+                                        onPressed: (){
+                                          viewmodel.callNextCustomer(selectedRestaurantId);
+                                        },
+                                        icon: const Icon(
+                                          Icons.notifications,
+                                          color: Color(0xFFFFFFFF),
+                                          size: 20,
+                                        ),
+                                        label: const Text(
+                                          'Call Next',
+                                          style: TextStyle(
+                                            color: Color(0xFFFFFFFF),
+                                            fontWeight: FontWeight.bold,
+                                            fontSize: 20,
+                                          ),
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                              SizedBox(height: 30),
+                              Container(
+                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                decoration: BoxDecoration(
+                                  color: const Color(0xFFDDF1F2),
+                                  borderRadius: BorderRadius.circular(16),
+                                ),
+                                child: Row(
+                                  children: [
+                                    Text(
+                                      '${queue.queueLength}',
+                                      style: const TextStyle(
+                                        fontSize: 35,
+                                        fontWeight: FontWeight(1000),
+                                      ),
+                                    ),
+                                    const SizedBox(width: 10),
+                                    const Text(
+                                      'Tables in Queue',
+                                      style: TextStyle(fontWeight: FontWeight.bold),
+                                    ),
+                                    const Spacer(),
+                                    Container(
+                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                      decoration: BoxDecoration(
+                                        color: const Color(0xFFF39850),
+                                        borderRadius: BorderRadius.circular(20),
+                                      ),
+                                      child: Text(
+                                        queue.waitStatus,
+                                        style: const TextStyle(
+                                          color: Colors.white,
+                                          fontWeight: FontWeight.bold,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ),
+                            ],
+                          ),
+                        );
+                      }
+                    );
+                  },
                 );
               },
             ),
@@ -321,7 +365,7 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
     return StreamBuilder<RestaurantBrandModel>(
       stream: viewmodel.watchRestaurantBrand(widget.restaurantBrandId),
       builder: (context, snapshot){
-        if(!snapshot.hasData || snapshot.data!.logoUrl.isEmpty){
+        if(!snapshot.hasData){
           return Container(
             height: 55,
             width: 55,
@@ -356,9 +400,32 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                   borderRadius: BorderRadius.circular(10),
                 ),
                 clipBehavior: Clip.antiAlias,
-                child: Image.network(
+                child: brand.logoUrl.isEmpty
+                    ? Center(
+                  child: Container(
+                    width: 50,
+                    height: 50,
+                    decoration: BoxDecoration(
+                      color: Colors.white,
+                      borderRadius: BorderRadius.circular(10),
+                    ),
+                    child: const Icon(
+                      Icons.restaurant,
+                      color: Color(0xFF006670),
+                      size: 30,
+                    ),
+                  ),
+                )
+                    : Image.network(
                   brand.logoUrl,
                   fit: BoxFit.cover,
+                  errorBuilder: (context, error, stackTrace) {
+                    return const Icon(
+                      Icons.restaurant,
+                      color: Color(0xFF006670),
+                      size: 30,
+                    );
+                  },
                 ),
               ),
               SizedBox(width: 10),
@@ -490,6 +557,41 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
           ),
         );
       }
+    );
+  }
+
+  Widget _buildSetupRequiredMessage() {
+    return const Center(
+      child: Padding(
+        padding: EdgeInsets.all(30),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.storefront_outlined,
+              size: 60,
+              color: Color(0xFF006670),
+            ),
+            SizedBox(height: 18),
+            Text(
+              'Profile setup required',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+            SizedBox(height: 10),
+            Text(
+              'Queue will be available once you complete your restaurant profile setup. Please go to Profile to finish setup.',
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                color: Color(0xFF64748B),
+                height: 1.4,
+              ),
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

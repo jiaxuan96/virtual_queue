@@ -77,6 +77,50 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
     selectedRestaurantId = widget.restaurantId;
   }
 
+  Future<bool?> _showLogoutConfirmationDialog() {
+    return showDialog<bool>(
+      context: context,
+      useRootNavigator: true,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Logout',
+          style: TextStyle(
+            fontFamily: 'Plus Jakarta Sans',
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to end your session and sign out?',
+          style: TextStyle(
+            fontFamily: 'Plus Jakarta Sans',
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(color: Color(0xFF48626E)),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Logout',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
   @override
   Widget build (BuildContext context) {
     return Scaffold(
@@ -130,8 +174,11 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                         height: 45,
                         child: ElevatedButton(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Color(0xFF115E59),
-                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFFD5E9EB),
+                            foregroundColor: Color(0xFF115E59),
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            side: const BorderSide(color: Color(0xFF115E59), width: 1.5),
                           ),
                           onPressed: () {
                             Navigator.push(
@@ -149,7 +196,7 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                             'Set Up Profile',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -160,13 +207,20 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                         height: 45,
                         child: ElevatedButton.icon(
                           style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
+                            backgroundColor: const Color(0xFFFFF1F2),
+                            foregroundColor: Colors.redAccent,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                            side: const BorderSide(color: Color(0xFFFECDD3), width: 1.5),
                           ),
                           onPressed: () async {
+                            final confirm = await _showLogoutConfirmationDialog();
+
+                            if (confirm != true) return;
+
                             final success = await viewmodel.logout();
 
-                            if (!mounted) return;
+                            if (!context.mounted) return;
 
                             if (success) {
                               Navigator.pushAndRemoveUntil(
@@ -186,12 +240,12 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                               );
                             }
                           },
-                          icon: const Icon(Icons.logout),
+                          icon: const Icon(Icons.logout_rounded, size: 20),
                           label: const Text(
                             'Logout',
                             style: TextStyle(
                               fontWeight: FontWeight.bold,
-                              fontSize: 15,
+                              fontSize: 16,
                             ),
                           ),
                         ),
@@ -498,13 +552,20 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                                 height: 50,
                                 child: ElevatedButton.icon(
                                   style: ElevatedButton.styleFrom(
-                                    backgroundColor: Colors.red,
-                                    foregroundColor: Colors.white,
+                                    backgroundColor: const Color(0xFFFFF1F2),
+                                    foregroundColor: Colors.redAccent,
+                                    elevation: 0,
+                                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                                    side: const BorderSide(color: Color(0xFFFECDD3), width: 1.5),
                                   ),
                                   onPressed: () async {
+                                    final confirm = await _showLogoutConfirmationDialog();
+
+                                    if (confirm != true) return;
+
                                     final success = await viewmodel.logout();
 
-                                    if (!mounted) return;
+                                    if (!context.mounted) return;
 
                                     if (success) {
                                       Navigator.pushAndRemoveUntil(
@@ -524,12 +585,12 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                                       );
                                     }
                                   },
-                                  icon: const Icon(Icons.logout),
+                                  icon: const Icon(Icons.logout_rounded, size: 20),
                                   label: const Text(
                                     'Logout',
                                     style: TextStyle(
                                       fontWeight: FontWeight.bold,
-                                      fontSize: 15,
+                                      fontSize: 16,
                                     ),
                                   ),
                                 ),
