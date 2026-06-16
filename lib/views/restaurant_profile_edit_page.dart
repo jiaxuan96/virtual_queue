@@ -409,13 +409,13 @@ class _RestaurantProfileEditPageState extends State<RestaurantProfileEditPage> {
   Widget _buildBranchCard(RestaurantModel restaurant) {
     return Container(
       width: double.infinity,
-      padding: const EdgeInsets.all(18),
+      padding: const EdgeInsets.only(bottom: 20, left: 20, right: 20, top: 30),
       decoration: _cardDecoration(),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           Text(
-            restaurant.branchName,
+            'Branch: ${restaurant.branchName}',
             style: const TextStyle(
               fontSize: 21,
               fontWeight: FontWeight.bold,
