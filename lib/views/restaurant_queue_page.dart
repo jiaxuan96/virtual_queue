@@ -429,69 +429,79 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                 ),
               ),
               SizedBox(width: 10),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  StreamBuilder<RestaurantBrandModel>(
-                    stream: viewmodel.watchRestaurantBrand(widget.restaurantBrandId),
-                    builder: (context, snapshot) {
-                      if (!snapshot.hasData) {
-                        return const Text(
-                          'Loading...',
-                          style: TextStyle(color: Colors.white),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  mainAxisAlignment: MainAxisAlignment.center,
+                  children: [
+                    StreamBuilder<RestaurantBrandModel>(
+                      stream: viewmodel.watchRestaurantBrand(widget.restaurantBrandId),
+                      builder: (context, snapshot) {
+                        if (!snapshot.hasData) {
+                          return const Text(
+                            'Loading...',
+                            style: TextStyle(color: Colors.white),
+                          );
+                        }
+                        final brand = snapshot.data!;
+                        return Text(
+                          brand.name,
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                          style: const TextStyle(
+                            color: Colors.white,
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                          ),
                         );
-                      }
-                      final brand = snapshot.data!;
-                      return Text(
-                        brand.name,
-                        style: const TextStyle(
-                          color: Colors.white,
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                        ),
-                      );
-                    },
-                  ),
-                  SizedBox(height: 3),
-                  Row(
-                    children: [
-                      Icon(
+                      },
+                    ),
+                    SizedBox(height: 3),
+                    Row(
+                      children: [
+                        Icon(
                           Icons.location_on_outlined,
                           color: Colors.white,
-                          size: 12
-                      ),
-                      SizedBox(width: 2),
-                      StreamBuilder<RestaurantModel> (
-                          stream: viewmodel.watchRestaurantBranch(
-                            widget.restaurantBrandId,
-                            selectedRestaurantId,
-                          ),
-                          builder: (context, snapshot) {
-                            if (!snapshot.hasData) {
-                              return const Text(
-                                '',
-                                style: TextStyle(
+                          size: 12,
+                        ),
+                        SizedBox(width: 2),
+                        Expanded(
+                          child: StreamBuilder<RestaurantModel> (
+                            stream: viewmodel.watchRestaurantBranch(
+                              widget.restaurantBrandId,
+                              selectedRestaurantId,
+                            ),
+                            builder: (context, snapshot) {
+                              if (!snapshot.hasData) {
+                                return const Text(
+                                  '',
+                                  style: TextStyle(
+                                    color: Colors.white,
+                                    fontSize: 10,
+                                  ),
+                                );
+                              }
+                              final restaurant = snapshot.data!;
+                              return Text(
+                                restaurant.branchName,
+                                maxLines: 1,
+                                overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
                                   color: Colors.white,
-                                  fontSize: 10,
+                                  fontSize: 13,
                                 ),
                               );
                             }
-                            final restaurant = snapshot.data!;
-                            return Text(
-                              restaurant.branchName,
-                              style: TextStyle(
-                                color: Colors.white,
-                              ),
-                            );
-                          }
-                      )
-                    ],
-                  ),
-                ],
+                          ),
+                        )
+                      ],
+                    ),
+                  ],
+                ),
               ),
-              const Spacer(),
-              PopupMenuButton<String>(
+              SizedBox(width: 8),
+              widget.restaurantIds.length > 1
+                  ? PopupMenuButton<String>(
                 color: Colors.white,
                 onSelected: (restaurantId){
                   setState(() {
@@ -550,6 +560,31 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                         size: 18,
                       ),
                     ],
+                  ),
+                ),
+              )
+                  : Container(
+                height: 30,
+                padding: const EdgeInsets.symmetric(horizontal: 12),
+                decoration: BoxDecoration(
+                  color: Color(0xFFF0F4F5),
+                  borderRadius: BorderRadius.circular(10),
+                  boxShadow: [
+                    BoxShadow(
+                      color: Colors.black.withValues(alpha: 0.25),
+                      blurRadius: 4,
+                      offset: const Offset(0, 4),
+                    ),
+                  ],
+                ),
+                child: Center(
+                  child: Text(
+                    '${widget.restaurantIds.length} branch',
+                    style: const TextStyle(
+                      color: Color(0xFF006670),
+                      fontWeight: FontWeight.bold,
+                      fontSize: 13,
+                    ),
                   ),
                 ),
               ),

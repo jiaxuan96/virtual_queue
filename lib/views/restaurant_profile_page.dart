@@ -282,7 +282,8 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                         Positioned(
                           top: 60,
                           right: 25,
-                          child: PopupMenuButton<String>(
+                          child: widget.restaurantIds.length > 1
+                              ? PopupMenuButton<String>(
                             color: Colors.white,
                             onSelected: (restaurantId){
                               setState(() {
@@ -341,6 +342,31 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                                     size: 18,
                                   ),
                                 ],
+                              ),
+                            ),
+                          )
+                              : Container(
+                            height: 30,
+                            padding: const EdgeInsets.symmetric(horizontal: 12),
+                            decoration: BoxDecoration(
+                              color: Color(0xFFF0F4F5),
+                              borderRadius: BorderRadius.circular(10),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withValues(alpha: 0.25),
+                                  blurRadius: 4,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
+                            child: Center(
+                              child: Text(
+                                '${widget.restaurantIds.length} branch',
+                                style: const TextStyle(
+                                  color: Color(0xFF006670),
+                                  fontWeight: FontWeight.bold,
+                                  fontSize: 13,
+                                ),
                               ),
                             ),
                           ),
