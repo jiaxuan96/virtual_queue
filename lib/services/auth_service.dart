@@ -108,7 +108,7 @@ class AuthService {
         'phone': ownerPhone,
         'estimated_time': 0,
         'is_active': true,
-        'opening_hours': '',
+        'opening_hours': {},
       });
     }
 
@@ -130,6 +130,10 @@ class AuthService {
       restaurantIds: restaurantIds,
       restaurantBrandId: brandRef.id,
     );
+  }
+
+  Future<void> logout() async {
+    await _auth.signOut();
   }
 
 }

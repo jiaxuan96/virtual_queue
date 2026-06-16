@@ -32,13 +32,31 @@ class RestaurantQueueViewmodel extends ChangeNotifier{
     }
   }
 
+  Future<void> updateRestaurantAvailability({
+    required String restaurantBrandId,
+    required String restaurantId,
+    required bool isActive,
+  }) async {
+    await _restaurantService.updateRestaurantAvailability(
+      restaurantBrandId: restaurantBrandId,
+      restaurantId: restaurantId,
+      isActive: isActive,
+    );
+  }
+
   final RestaurantService _restaurantService = RestaurantService();
 
   Stream<RestaurantBrandModel> watchRestaurantBrand(String restaurantBrandId) {
     return _restaurantService.watchRestaurant(restaurantBrandId);
   }
 
-  Stream<RestaurantModel> watchRestaurantBranch(String restaurantBrandId, String restaurantId) {
-    return _restaurantService.watchRestaurantBranch(restaurantBrandId, restaurantId);
+  Stream<RestaurantModel> watchRestaurantBranch(
+    String restaurantBrandId,
+    String restaurantId
+  ) {
+    return _restaurantService.watchRestaurantBranch(
+      restaurantBrandId,
+      restaurantId
+    );
   }
 }
