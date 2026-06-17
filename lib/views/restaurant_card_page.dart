@@ -71,7 +71,7 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
     }
   }
 
-  void _handleJoinQueue() async {
+  void _handleJoinQueue(Map<String, dynamic> restaurantData) async {
     if (_isLoading) return; 
 
     final String? realUserId = getRealUserId();
@@ -87,6 +87,7 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
       int? assignedNumber = await _viewModel.joinQueueLine(
         brandId: widget.brandId,
         restaurantId: widget.restaurantId,
+        restaurantData: restaurantData,
         userId: realUserId,
       );
       
@@ -123,7 +124,7 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
 
   String _formatOpeningHours(dynamic openingHours) {
     if (openingHours is! Map || openingHours.isEmpty) {
-      return 'Hours Not Available';
+      return 'Operating Hours Not Available';
     }
 
     final dayLabels = {
@@ -492,15 +493,19 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                       elevation: 0,
                                     ),
-                                    onPressed: _isLoading ? null : _handleJoinQueue,
+                                    // 🎯 DISABLE GATEKEEPER: Disable button if loading OR if the restaurant is closed
+                                    onPressed: (_isLoading || state.businessStatusText == 'Closed') 
+                                      ? null 
+                                      : () => _handleJoinQueue(state.restaurantData),
                                     icon: _isLoading 
                                       ? const SizedBox.shrink()
                                       : const Icon(Icons.confirmation_num_outlined, color: Colors.white, size: 20),
                                     label: _isLoading 
                                       ? const CircularProgressIndicator(color: Colors.white)
-                                      : const Text(
-                                          'Join Queue Line',
-                                          style: TextStyle(
+                                      : Text(
+                                          // 📝 Dynamic text variation to match the disabled state if you want!
+                                          state.businessStatusText == 'Closed' ? 'Restaurant Closed' : 'Join Queue Line',
+                                          style: const TextStyle(
                                             fontFamily: 'Plus Jakarta Sans',
                                             fontSize: 18,
                                             fontWeight: FontWeight.w700,

@@ -263,16 +263,31 @@ class _SavedRestaurantsPageState extends State<SavedRestaurantsPage> {
               child: Stack(
                 children: [
                   Positioned.fill(
-                    child: Image.asset(
-                      'assets/images/$assetName.png', 
-                      fit: BoxFit.cover,
-                      errorBuilder: (context, error, stackTrace) {
-                        return const Image(
-                          image: AssetImage('assets/images/Restaurant_Icon.png'),
-                          fit: BoxFit.cover,
-                        );
-                      },
-                    ),
+                    child: cardState.restaurant.imageUrl != null && cardState.restaurant.imageUrl!.isNotEmpty
+                        ? Image.network(
+                            cardState.restaurant.imageUrl!, 
+                            fit: BoxFit.cover,
+                            // 🔄 Handles loading state beautifully
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return const Center(
+                                child: CircularProgressIndicator(
+                                  color: Color(0xFF006670),
+                                ),
+                              );
+                            },
+                            // 🚫 Fallback asset if the network link is broken or throws an exception
+                            errorBuilder: (context, error, stackTrace) {
+                              return const Image(
+                                image: AssetImage('assets/images/Restaurant_Icon.png'),
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          )
+                        : const Image(
+                            image: AssetImage('assets/images/Restaurant_Icon.png'),
+                            fit: BoxFit.cover,
+                          ),
                   ),
                   Positioned.fill(
                     child: Container(
@@ -356,18 +371,21 @@ class _SavedRestaurantsPageState extends State<SavedRestaurantsPage> {
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(Icons.access_time_rounded, color: Color(0xFFF39850), size: 14),
+                            Icon(
+                              Icons.access_time_rounded, 
+                              color: cardState.businessStatusColor, // 🎨 Dynamic: Green if open, Red if closed
+                              size: 14,
+                            ),
                             const SizedBox(width: 6),
-                            Expanded(
+                            SizedBox(
+                              width: 130, 
                               child: Text(
-                                openingHours, 
-                                maxLines: 1,
-                                overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                cardState.businessStatusText, // 🎯 Displays exactly "Opening" or "Closed"
+                                style: TextStyle(
                                   fontFamily: 'Plus Jakarta Sans',
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFFF39850),
+                                  color: cardState.businessStatusColor, // 🎨 Dynamic matching text color
                                 ),
                               ),
                             ),

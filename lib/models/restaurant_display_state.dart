@@ -11,6 +11,8 @@ class RestaurantDisplayState {
   final String badgeText;
   final Color badgeBgColor;
   final Color badgeTextColor;
+  final String businessStatusText;
+  final Color businessStatusColor;
 
   RestaurantDisplayState({
     required this.restaurant,
@@ -20,5 +22,7 @@ class RestaurantDisplayState {
     required this.badgeText,
     required this.badgeBgColor,
     required this.badgeTextColor,
+    required this.businessStatusText,  
+    required this.businessStatusColor,
   });
 }

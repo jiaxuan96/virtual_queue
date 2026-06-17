@@ -54,6 +54,8 @@ class SavedRestaurantsViewModel {
               final restMap = restSnap.data() as Map<String, dynamic>;
               final restaurantModel = RestaurantModel.fromMap(restMap);
 
+              final bool isActive = restMap['is_active'] ?? false;
+
               // 3. Fetch Live Queue Node Info Info Document Status
               final queueDoc = await _firestore.collection('queues').doc(restaurantId).get();
               RestaurantQueueModel queueModel;
@@ -72,7 +74,7 @@ class SavedRestaurantsViewModel {
               }
 
               // 4. Transform models into UI Presentation States
-              final cardState = _calculateCardPresentation(restaurantModel, brandModel, queueModel);
+              final cardState = _calculateCardPresentation(restaurantModel, brandModel, queueModel, isActive);
               bookmarkedCards.add(cardState);
             } catch (e) {
               debugPrint('🚨 [ViewModel Loop Exception] Processing bookmark failed: $e');
@@ -86,6 +88,7 @@ class SavedRestaurantsViewModel {
     RestaurantModel restaurant,
     RestaurantBrandModel brand,
     RestaurantQueueModel queue,
+    bool isActive,
   ) {
     // Safely parse out standard data state sizes
     final int currentQueueLength = queue.queueLength;
@@ -97,6 +100,9 @@ class SavedRestaurantsViewModel {
     if (statusString == 'Moderate') badgeBgColor = const Color(0xFFFF7890); // Dark pink
     if (statusString == 'Busy') badgeBgColor = const Color(0xFFBA1A1A); // Red Alert
 
+    final String businessStateText = isActive ? 'Opening' : 'Closed';
+    final Color businessStateColor = isActive ? const Color(0xFF008645) : const Color(0xFFBA1A1A);
+
     return RestaurantDisplayState(
       restaurant: restaurant,
       brand: brand,
@@ -105,6 +111,8 @@ class SavedRestaurantsViewModel {
       badgeText: statusString,
       badgeBgColor: badgeBgColor,
       badgeTextColor: Colors.white,
+      businessStatusText: businessStateText,  
+      businessStatusColor: businessStateColor, 
     );
   }
 }

@@ -3,6 +3,8 @@ import 'dart:async';
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart'; // Required for debugPrint
+import 'package:http/http.dart' as http;
+import 'dart:convert';
 import '../services/queue_service.dart';
 import '../models/restaurant_detail_state.dart';
 
@@ -96,16 +98,92 @@ class RestaurantCardViewModel {
   Future<int?> joinQueueLine({
     required String brandId,
     required String restaurantId,
+    required Map<String, dynamic> restaurantData,
     String? userId,
   }) async {
     final String targetUserId = userId ?? currentUserId;
 
     debugPrint('🎫 [VM Queue Request] Forwarding request to QueueService for User: $targetUserId');
 
-    return await _queueService.joinQueue(
+    // return await _queueService.joinQueue(
+    //   brandId: brandId,
+    //   restaurantId: restaurantId,
+    //   userId: targetUserId,
+    // );
+    final int? queueNumberResult = await _queueService.joinQueue(
       brandId: brandId,
       restaurantId: restaurantId,
       userId: targetUserId,
     );
+
+    // 2. 🚀 Trigger the email ticket immediately if the join database action succeeds
+    if (queueNumberResult != null) {
+      // Safely fetch user data fields out of your session model mapping profile
+      final String userEmail = _auth.currentUser?.email ?? 'customer@example.com'; 
+      // final String branchName = restaurantData['branch_name'] ?? 'Our Branch';
+
+      // 🔍 STEP 1: Fetch the parent brand document to pull the top-level "name" 
+      final brandSnap = await _firestore.collection('restaurant_brands').doc(brandId).get();
+      final String brandName = brandSnap.data()?['name'] ?? 'Restaurant';
+
+      // 🔍 STEP 2: Pull the specific branch location string from your passed parameter map
+      final String branchNameOnly = restaurantData['branch_name'] ?? 'Our Branch';
+
+      // 🤝 STEP 3: String interpolation to join them exactly as requested
+      final String fullFormattedBranchName = "$brandName - $branchNameOnly";
+
+      debugPrint('📝 [Email System] Combined Output String: "$fullFormattedBranchName"');
+
+      // Fire and forget in the background so the UI doesn't stutter or freeze up waiting
+      unawaited(_sendEmailTicket(
+        userEmail: userEmail,
+        branchName: fullFormattedBranchName,
+        queueNumber: queueNumberResult.toString(),
+      ));
+    }
+
+    return queueNumberResult;
+  }
+
+  Future<void> _sendEmailTicket({
+    required String userEmail,
+    required String branchName,
+    required String queueNumber,
+  }) async {
+    // 🔑 Replace these safely with your free sandbox dashboard tokens from EmailJS
+    const String serviceId = "service_otndmwn";
+    const String templateId = "template_v790uff";
+    const String publicKey = "m0-pjpXqF0pD4BpH4";
+
+    try {
+      debugPrint('📨 [Email API] Initializing mail routing pipeline to: $userEmail');
+      
+      final response = await http.post(
+        Uri.parse('https://api.emailjs.com/api/v1.0/email/send'),
+        headers: {
+          'Content-Type': 'application/json',
+          'Origin': 'http://localhost', // Required parameter by the EmailJS verification network
+        },
+        body: json.encode({
+          'service_id': serviceId,
+          'template_id': templateId,
+          'user_id': publicKey,
+          'template_params': {
+            'user_email': userEmail,
+            'branch_name': branchName,
+            'queue_number': queueNumber,
+            'issue_time': DateTime.now().toString().split('.')[0], // Strips milliseconds cleanly
+          }
+        }),
+      );
+
+      if (response.statusCode == 200) {
+        debugPrint('✅ [Email API Success] Virtual queue ticket dispatched securely to user.');
+      } else {
+        debugPrint('🚨 [Email API Warning] Relay rejected payload. Status: ${response.statusCode} - ${response.body}');
+      }
+    } catch (e) {
+      debugPrint('🚨 [Email API Error] Network request failure on mail thread: $e');
+    }
   }
 }

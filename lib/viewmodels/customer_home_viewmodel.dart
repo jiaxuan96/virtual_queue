@@ -68,7 +68,11 @@ class CustomerHomeViewModel {
 
         for (var restaurantDoc in restaurantQuery.docs) {
           final String restaurantId = restaurantDoc.id;
-          final restaurantModel = RestaurantModel.fromMap(restaurantDoc.data() as Map<String, dynamic>);
+          final restaurantRawData = restaurantDoc.data() as Map<String, dynamic>;
+          // final restaurantModel = RestaurantModel.fromMap(restaurantDoc.data() as Map<String, dynamic>);
+          final restaurantModel = RestaurantModel.fromMap(restaurantRawData);
+
+          final bool isActive = restaurantRawData['is_active'] ?? false;
 
           // 🎯 2. REAL-TIME TEXT SEARCH FILTERING
           // Verifies if the user's query string maps to either the brand title or cuisine categorization tag strings
@@ -101,7 +105,7 @@ class CustomerHomeViewModel {
             }, restaurantId);
           }
 
-          final cardState = _calculateCardPresentation(restaurantModel, brandModel, queueModel);
+          final cardState = _calculateCardPresentation(restaurantModel, brandModel, queueModel, isActive);
           displayCards.add(cardState);
         }
       } catch (e) {
@@ -115,6 +119,7 @@ class CustomerHomeViewModel {
     RestaurantModel restaurant,
     RestaurantBrandModel brand,
     RestaurantQueueModel queue,
+    bool isActive,
   ) {
     final int currentQueueLength = queue.queueLength;
     final String statusString = currentQueueLength == 0 ? 'No waiting' : queue.waitStatus;
@@ -124,6 +129,9 @@ class CustomerHomeViewModel {
     if (statusString == 'Moderate') badgeBgColor = const Color(0xFFFF7890); 
     if (statusString == 'Busy') badgeBgColor = const Color(0xFFBA1A1A); 
 
+    final String businessStateText = isActive ? 'Opening' : 'Closed';
+    final Color businessStateColor = isActive ? const Color(0xFF008645) : const Color(0xFFBA1A1A);
+
     return RestaurantDisplayState(
       restaurant: restaurant,
       brand: brand,
@@ -132,6 +140,8 @@ class CustomerHomeViewModel {
       badgeText: statusString,
       badgeBgColor: badgeBgColor,
       badgeTextColor: Colors.white,
+      businessStatusText: businessStateText,  
+      businessStatusColor: businessStateColor, 
     );
   }
 

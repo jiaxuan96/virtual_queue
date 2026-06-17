@@ -1,5 +1,6 @@
 // views/user_profile_view.dart
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 import '../viewmodels/user_profile_viewmodel.dart';
 import 'saved_restaurants_page.dart';
 
@@ -210,7 +211,8 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   const SizedBox(width: 12),
                                   Expanded(
                                     child: Text(
-                                      'Password change failed: $errorMsg', 
+                                      // 'Password change failed: $errorMsg', 
+                                      'Password change failed. Please try again.',
                                       style: const TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w600),
                                       maxLines: 2,
                                       overflow: TextOverflow.ellipsis,
@@ -218,7 +220,7 @@ class _UserProfileViewState extends State<UserProfileView> {
                                   ),
                                 ],
                               ),
-                              backgroundColor: Colors.redAccent,
+                              backgroundColor: Colors.red,
                               behavior: SnackBarBehavior.floating,
                               duration: const Duration(seconds: 4),
                             ),
@@ -244,7 +246,9 @@ class _UserProfileViewState extends State<UserProfileView> {
   void _showEditProfileBottomSheet() {
     final formKey = GlobalKey<FormState>();
     final nameController = TextEditingController(text: _viewModel.userDisplayName);
-    final phoneController = TextEditingController(text: _viewModel.userPhone);
+    // final phoneController = TextEditingController(text: _viewModel.userPhone);
+
+    final phoneController = TextEditingController(text: _viewModel.userPhone.replaceFirst('+60', ''));
 
     showModalBottomSheet(
       context: context,
@@ -310,15 +314,43 @@ class _UserProfileViewState extends State<UserProfileView> {
                 // Phone Field Input
                 const Text(
                   'Phone Number',
-                  style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 13, fontWeight: FontWeight.w600, color: Color(0xFF48626E)),
+                  style: TextStyle(
+                    fontFamily: 'Plus Jakarta Sans', 
+                    fontSize: 13, 
+                    fontWeight: FontWeight.w600, 
+                    color: Color(0xFF48626E),
+                  ),
                 ),
                 const SizedBox(height: 8),
                 TextFormField(
                   controller: phoneController,
                   style: const TextStyle(fontFamily: 'Plus Jakarta Sans', fontSize: 16),
                   keyboardType: TextInputType.phone,
+                  inputFormatters: [
+                    FilteringTextInputFormatter.digitsOnly, // 🚫 Blocks any spaces, symbols, or alphabetic inputs
+                    LengthLimitingTextInputFormatter(10),   // 🛑 Restricts the input field strictly to a maximum of 10 digits
+                  ],
                   decoration: InputDecoration(
-                    hintText: 'Enter your phone number',
+                    // hintText: '123456789', // Example hint text for 9 or 10 digits
+                    // 🇲🇾 FIXED PREFIX LABEL: Lock (+60) at the front of the input field
+                    prefixIcon: const Padding(
+                      padding: EdgeInsets.only(left: 16, right: 8),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        mainAxisAlignment: MainAxisAlignment.center,
+                        children: [
+                          Text(
+                            '+60',
+                            style: TextStyle(
+                              fontFamily: 'Plus Jakarta Sans',
+                              fontSize: 16,
+                              fontWeight: FontWeight.w600,
+                              color: Color(0xFF48626E),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
                     contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
                     border: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E9EA))),
                     enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(12), borderSide: const BorderSide(color: Color(0xFFE5E9EA))),
@@ -339,6 +371,29 @@ class _UserProfileViewState extends State<UserProfileView> {
                     ),
                     onPressed: () async {
                       if (formKey.currentState!.validate()) {
+                        
+                        // 🎯 PLACE THE PHONE VALIDATION HERE (Gatekeeper)
+                        if (phoneController.text.length < 9) {
+                          ScaffoldMessenger.of(context).showSnackBar(
+                            const SnackBar(
+                              content: Row(
+                                children: [
+                                  Icon(Icons.warning_amber_rounded, color: Colors.white, size: 20),
+                                  SizedBox(width: 12),
+                                  Text(
+                                    'Phone number must be at least 9 digits long.', 
+                                    style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.w600),
+                                  ),
+                                ],
+                              ),
+                              backgroundColor: Colors.red,
+                              behavior: SnackBarBehavior.floating,
+                              duration: Duration(seconds: 3),
+                            ),
+                          );
+                          return; // 🛑 Stop execution right here
+                        }
+
                         // 1. Ask for confirmation before updating Firestore
                         final bool confirmSave = await _showSaveConfirmationDialog() ?? false;
                         if (!confirmSave) return; // Exit if they hit Cancel
@@ -346,9 +401,10 @@ class _UserProfileViewState extends State<UserProfileView> {
                         // 2. Close bottom drawer view form if confirmed
                         if (context.mounted) Navigator.pop(context); 
                         
+                        // 🇲🇾 Attach the +60 country code prefix right here to the payload
                         final Map<String, dynamic> clearPayload = {
                           'name': nameController.text.trim(),
-                          'phone': phoneController.text.trim(),
+                          'phone': '+60${phoneController.text.trim()}', // 🚀 Saved safely as "+60123456789"
                         };
 
                         // 3. Process backend write task

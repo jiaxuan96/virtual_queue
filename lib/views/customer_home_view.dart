@@ -786,19 +786,21 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                       Expanded(
                         child: Row(
                           children: [
-                            const Icon(Icons.access_time_rounded, color: Color(0xFFF39850), size: 14),
+                            Icon(
+                              Icons.access_time_rounded, 
+                              color: cardState.businessStatusColor, // 🎨 Dynamic: Green if open, Red if closed
+                              size: 14,
+                            ),
                             const SizedBox(width: 6),
                             SizedBox(
                               width: 130, 
                               child: Text(
-                                _formatOpeningHours(cardState.restaurant.openingHours),
-                                // maxLines: 1,
-                                // overflow: TextOverflow.ellipsis,
-                                style: const TextStyle(
+                                cardState.businessStatusText, // 🎯 Displays exactly "Opening" or "Closed"
+                                style: TextStyle(
                                   fontFamily: 'Plus Jakarta Sans',
                                   fontSize: 13,
                                   fontWeight: FontWeight.w600,
-                                  color: Color(0xFFF39850),
+                                  color: cardState.businessStatusColor, // 🎨 Dynamic matching text color
                                 ),
                               ),
                             ),

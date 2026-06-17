@@ -31,4 +31,9 @@ class RestaurantDetailState {
     if (queueLength <= 10) return const Color(0xFFFF7890);
     return const Color(0xFFBA1A1A);
   }
+
+  String get businessStatusText {
+    final bool isActive = restaurantData['is_active'] ?? false;
+    return isActive ? 'Opening' : 'Closed';
+  }
 }
