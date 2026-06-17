@@ -397,6 +397,8 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
 
           _checkAndTriggerCallAlert(streamTicketNumber, currentServing, brandName);
 
+          final String mapImageUrl = state.restaurantData['image_url'] ?? '';
+
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
             padding: const EdgeInsets.symmetric(horizontal: 24.0, vertical: 24.0),
@@ -549,11 +551,33 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
                     children: [
                       Container(
                         height: 153,
-                        color: const Color(0xFFE2E8F0),
                         width: double.infinity,
-                        child: const Center(
-                          child: Icon(Icons.map_outlined, size: 48, color: Colors.blueGrey),
+                        clipBehavior: Clip.antiAlias, // Keeps corners cleanly cropped matching the container structure
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFE2E8F0),
+                          borderRadius: BorderRadius.circular(16), // Blends smoothly into your bento container layout
+                          border: Border.all(color: const Color(0xFFEDF2F4)),
                         ),
+                        child: mapImageUrl.isNotEmpty
+                            ? Image.network(
+                                mapImageUrl, // 🚀 Streams the live image path from your database
+                                fit: BoxFit.cover,
+                                // ⏳ Loading framework indicator while downloading map graphics from your CDN
+                                loadingBuilder: (context, child, loadingProgress) {
+                                  if (loadingProgress == null) return child;
+                                  return const Center(
+                                    child: CircularProgressIndicator(
+                                      color: Color(0xFF006670),
+                                      strokeWidth: 2,
+                                    ),
+                                  );
+                                },
+                                // 🚨 Fallback safety engine if the device drops offline or link is broken
+                                errorBuilder: (context, error, stackTrace) {
+                                  return _buildMapPlaceholder();
+                                },
+                              )
+                            : _buildMapPlaceholder(), // Fallback if the field is empty or missing in Firestore
                       ),
                       Container(
                         padding: const EdgeInsets.all(24),
@@ -672,6 +696,17 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
       ),
     );
   }
+}
+
+Widget _buildMapPlaceholder() {
+  return const Center(
+    child: Column(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        Icon(Icons.map_outlined, size: 36, color: Color(0xFF6E797B)),
+      ],
+    ),
+  );
 }
 
 class CircularProgressVectorPainter extends CustomPainter {

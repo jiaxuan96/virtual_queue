@@ -228,7 +228,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
 
   String _formatOpeningHours(Map<String, dynamic> openingHours) {
     if (openingHours.isEmpty) {
-      return 'Opening hours not set';
+      return 'Operating Hours Not Available';
     }
 
     final dayLabels = {
@@ -627,7 +627,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
   }
 
   Widget _buildRestaurantCard(BuildContext context, RestaurantDisplayState cardState) {
-    final String assetName = cardState.brand.name.replaceAll(' ', '_');
+    final String liveImageUrl = cardState.restaurant.imageUrl;
 
     return Container(
       margin: const EdgeInsets.only(bottom: 20),
@@ -670,19 +670,43 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
         child: Column(
           crossAxisAlignment: CrossAxisAlignment.start,
           children: [
-            Container(
+           // 🖼️ LIVE FIREBASE NETWORK IMAGE VIEWPORT HOUSING
+            SizedBox(
               height: 213.75, 
               width: double.infinity,
-              decoration: BoxDecoration(
-                color: const Color(0xFFECEFF1),
-                image: DecorationImage(
-                  image: AssetImage('assets/images/$assetName.png'), 
-                  onError: (exception, stackTrace) => const AssetImage('assets/images/Restaurant_Icon.png'),
-                  fit: BoxFit.cover,
-                ),
-              ),
               child: Stack(
                 children: [
+                  Positioned.fill(
+                    child: liveImageUrl.isNotEmpty
+                        ? Image.network(
+                            liveImageUrl,
+                            fit: BoxFit.cover,
+                            // ⏳ Loading placeholder while fetching bytes from Cloudinary CDN
+                            loadingBuilder: (context, child, loadingProgress) {
+                              if (loadingProgress == null) return child;
+                              return Container(
+                                color: const Color(0xFFECEFF1),
+                                child: const Center(
+                                  child: CircularProgressIndicator(
+                                    color: Color(0xFF006670),
+                                    strokeWidth: 2,
+                                  ),
+                                ),
+                              );
+                            },
+                            // 🚨 Fallback vector layer if link expires or network breaks
+                            errorBuilder: (context, error, stackTrace) {
+                              return Image.asset(
+                                'assets/images/Restaurant_Icon.png',
+                                fit: BoxFit.cover,
+                              );
+                            },
+                          )
+                        : Image.asset(
+                            'assets/images/Restaurant_Icon.png',
+                            fit: BoxFit.cover,
+                          ),
+                  ),
                   Positioned.fill(
                     child: Container(
                       decoration: const BoxDecoration(
@@ -764,13 +788,18 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                           children: [
                             const Icon(Icons.access_time_rounded, color: Color(0xFFF39850), size: 14),
                             const SizedBox(width: 6),
-                            Text(
-                              _formatOpeningHours(cardState.restaurant.openingHours),
-                              style: const TextStyle(
-                                fontFamily: 'Plus Jakarta Sans',
-                                fontSize: 13,
-                                fontWeight: FontWeight.w600,
-                                color: Color(0xFFF39850),
+                            SizedBox(
+                              width: 130, 
+                              child: Text(
+                                _formatOpeningHours(cardState.restaurant.openingHours),
+                                // maxLines: 1,
+                                // overflow: TextOverflow.ellipsis,
+                                style: const TextStyle(
+                                  fontFamily: 'Plus Jakarta Sans',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: Color(0xFFF39850),
+                                ),
                               ),
                             ),
                           ],

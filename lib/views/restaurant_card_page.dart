@@ -8,12 +8,14 @@ import '../services/queue_service.dart';
 
 class RestaurantCardPage extends StatefulWidget {
   final String brandId;       
-  final String restaurantId;  
+  final String restaurantId; 
+  final String? imageUrl; 
 
   const RestaurantCardPage({
     super.key,
     required this.brandId,
     required this.restaurantId,
+    this.imageUrl,
   });
 
   @override
@@ -193,8 +195,8 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
           final String phoneText = state.restaurantData['phone'] ?? 'No Contact Phone';
           final String descriptionText = state.brandData['about'] ?? 'No description provided.';
           
-          // Image naming fallback system based on brand name
-          final String assetName = brandName.replaceAll(' ', '_');
+          // final String assetName = brandName.replaceAll(' ', '_');
+          final String imageUrl = state.restaurantData['image_url'] ?? '';
 
           return SingleChildScrollView(
             physics: const BouncingScrollPhysics(),
@@ -208,27 +210,51 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
                   children: [
                     
                     // 1. DYNAMIC HERO IMAGE SECTION
-                    SizedBox(
+                   SizedBox(
                       height: 431,
                       child: Stack(
                         children: [
                           Positioned.fill(
-                            child: Container(
-                              decoration: BoxDecoration(
-                                image: DecorationImage(
-                                  image: AssetImage('assets/images/$assetName.png'), 
-                                  onError: (exception, stackTrace) => const AssetImage('assets/images/Restaurant_Icon.png'),
+                            child: imageUrl.isNotEmpty
+                              ? Image.network(
+                                  imageUrl, // 🚀 Powered entirely by real-time Stream data pipeline
+                                  fit: BoxFit.cover,
+                                  // ⏳ Loading placeholder layer while fetching data from the Cloudinary CDN
+                                  loadingBuilder: (context, child, loadingProgress) {
+                                    if (loadingProgress == null) return child;
+                                    return Container(
+                                      color: const Color(0xFFECEFF1),
+                                      child: const Center(
+                                        child: CircularProgressIndicator(
+                                          color: Color(0xFF006670),
+                                          strokeWidth: 2,
+                                        ),
+                                      ),
+                                    );
+                                  },
+                                  // 🚨 Fallback asset if connection times out or link fails
+                                  errorBuilder: (context, error, stackTrace) {
+                                    return Image.asset(
+                                      'assets/images/Restaurant_Icon.png',
+                                      fit: BoxFit.cover,
+                                    );
+                                  },
+                                )
+                              : Image.asset(
+                                  'assets/images/Restaurant_Icon.png',
                                   fit: BoxFit.cover,
                                 ),
-                              ),
-                              child: Container(
-                                decoration: const BoxDecoration(
-                                  gradient: LinearGradient(
-                                    begin: Alignment.bottomCenter,
-                                    end: Alignment.topCenter,
-                                    colors: [Color(0xFFF6FAFB), Color(0x00F6FAFB), Color(0x33000000)],
-                                    stops: [0.0, 0.5, 1.0],
-                                  ),
+                          ),
+
+                          // HEADER GRADIENT TINT SHIELD OVERLAY
+                          Positioned.fill(
+                            child: Container(
+                              decoration: const BoxDecoration(
+                                gradient: LinearGradient(
+                                  begin: Alignment.bottomCenter,
+                                  end: Alignment.topCenter,
+                                  colors: [Color(0xFFF6FAFB), Color(0x00F6FAFB), Color(0x33000000)],
+                                  stops: [0.0, 0.5, 1.0],
                                 ),
                               ),
                             ),
