@@ -112,7 +112,7 @@ class _RestaurantProfileSetupPageState extends State<RestaurantProfileSetupPage>
                     if (!isBrandSetupComplete(brand))
                       _buildBrandSetupSection()
                     else
-                      ..._buildBranchCards(),
+                      _buildBranchSetupSection(),
 
                     const SizedBox(height: 20),
                   ],
@@ -438,6 +438,120 @@ class _RestaurantProfileSetupPageState extends State<RestaurantProfileSetupPage>
               'Set Up',
               style: TextStyle(
                 fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBranchSetupSection() {
+    return StreamBuilder<List<RestaurantModel>>(
+      stream: viewmodel.watchRestaurantBranches(
+        widget.restaurantBrandId,
+        widget.restaurantIds,
+      ),
+      builder: (context, snapshot) {
+        if (!snapshot.hasData) {
+          return const CircularProgressIndicator();
+        }
+
+        final restaurants = snapshot.data!;
+        final incompleteBranches = <Widget>[];
+
+        for (int i = 0; i < restaurants.length; i++) {
+          final restaurant = restaurants[i];
+          final restaurantId = widget.restaurantIds[i];
+
+          if (!isBranchSetupComplete(restaurant)) {
+            incompleteBranches.add(
+              _buildBranchCard(
+                branchName: restaurant.branchName,
+                address: restaurant.address,
+                onTap: () {
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => RestaurantBranchProfileSetupPage(
+                        restaurantId: restaurantId,
+                        restaurantBrandId: widget.restaurantBrandId,
+                      ),
+                    ),
+                  );
+                },
+              ),
+            );
+          }
+        }
+
+        if (incompleteBranches.isEmpty) {
+          return _buildAllBranchesDone();
+        }
+
+        return Column(
+          children: incompleteBranches,
+        );
+      },
+    );
+  }
+
+  Widget _buildAllBranchesDone() {
+    return Container(
+      width: double.infinity,
+      padding: const EdgeInsets.all(24),
+      decoration: BoxDecoration(
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.08),
+            blurRadius: 12,
+            offset: const Offset(0, 4),
+          ),
+        ],
+      ),
+      child: Column(
+        children: [
+          const Icon(
+            Icons.check_circle,
+            color: Color(0xFF115E59),
+            size: 56,
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'All branch profiles are complete!',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 20,
+              fontWeight: FontWeight.bold,
+            ),
+          ),
+          const SizedBox(height: 8),
+          const Text(
+            'You can go back to your restaurant profile now.',
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              color: Color(0xFF64748B),
+            ),
+          ),
+          const SizedBox(height: 20),
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF115E59),
+                foregroundColor: Colors.white,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+              ),
+              onPressed: () {
+                Navigator.pop(context);
+              },
+              child: const Text(
+                'Back to Profile',
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                ),
               ),
             ),
           ),

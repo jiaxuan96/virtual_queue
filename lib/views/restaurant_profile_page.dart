@@ -468,7 +468,9 @@ class _RestaurantProfilePageState extends State<RestaurantProfilePage>{
                                       crossAxisAlignment: CrossAxisAlignment.start,
                                       children: [
                                         Text(
-                                          '${brand.name} •\n${restaurant.branchName}',
+                                          widget.restaurantIds.length > 1
+                                              ? '${brand.name} •\n${restaurant.branchName}'
+                                              : brand.name,
                                           style: const TextStyle(
                                             fontSize: 23,
                                             fontWeight: FontWeight.bold,

@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:virtual_queue/services/restaurant_service.dart';
 import 'package:virtual_queue/models/restaurant_brand_model.dart';
 import 'package:virtual_queue/models/restaurant_model.dart';
+import 'package:rxdart/rxdart.dart';
 
 class RestaurantProfileSetupViewModel extends ChangeNotifier {
   final RestaurantService _restaurantService = RestaurantService();
@@ -166,5 +167,17 @@ class RestaurantProfileSetupViewModel extends ChangeNotifier {
       restaurantBrandId,
       restaurantId,
     );
+  }
+
+  // watch all branches for a restaurant
+  Stream<List<RestaurantModel>> watchRestaurantBranches(
+      String restaurantBrandId,
+      List<String> restaurantIds,
+      ) {
+    final streams = restaurantIds.map((restaurantId) {
+      return watchRestaurantBranch(restaurantBrandId, restaurantId);
+    }).toList();
+
+    return Rx.combineLatestList(streams);
   }
 }
