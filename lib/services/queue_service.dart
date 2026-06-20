@@ -51,7 +51,7 @@ class QueueService {
         transaction.set(queueRef, {
           'brand_id': brandId,
           'restaurant_id': restaurantId,
-          'current_serving': 1,
+          'current_serving': 0,
           'next_available_number': 2,
         });
       } else {
@@ -100,50 +100,163 @@ class QueueService {
     });
   }
 
+  // WAITING = customer joined, not called yet
+  // CALLED = now serving
+  // SERVED = finished
+  // CANCELLED = skipped
+
   // Update current serving when staff pressing Call Next
   Future<void> callNextCustomer(String restaurantId) async {
-    final DocumentReference queueRef = _db.collection('queues').doc(restaurantId);
-    final CollectionReference ticketsRef = queueRef.collection('tickets');
+    final queueRef = _db.collection('queues').doc(restaurantId);
+    final ticketsRef = queueRef.collection('tickets');
 
     await _db.runTransaction((transaction) async {
-      final DocumentSnapshot queueSnapshot = await transaction.get(queueRef);
+      final queueSnapshot = await transaction.get(queueRef);
       if (!queueSnapshot.exists) return;
 
-      final Map<String, dynamic> queueData = queueSnapshot.data() as Map<String, dynamic>;
-      final int currentServing = queueData['current_serving'] ?? 1;
+      final queueData = queueSnapshot.data() as Map<String, dynamic>;
+      final currentServing = queueData['current_serving'] ?? 0;
 
-      // 1. Find the ticket matching this current serving number
-      final QuerySnapshot ticketMatch = await ticketsRef
-          .where('queue_number', isEqualTo: currentServing)
+      // 1. If there is already a called customer,
+      //    finish that customer first before calling the next one.
+      if (currentServing > 0) {
+        final currentTicketMatch = await ticketsRef
+            .where('queue_number', isEqualTo: currentServing)
+            .where('status', isEqualTo: 'CALLED')
+            .limit(1)
+            .get();
+
+        if (currentTicketMatch.docs.isNotEmpty) {
+          final ticketDoc = currentTicketMatch.docs.first;
+          final ticketData = ticketDoc.data() as Map<String, dynamic>;
+          final userId = ticketData['user_id'];
+
+          // Move current customer from CALLED to SERVED.
+          transaction.update(ticketDoc.reference, {'status': 'SERVED'});
+
+          // 2. 🚀 UPDATE USER PROFILE SUBCOLLECTION (Instead of deleting)
+          if (userId != null && userId.isNotEmpty) {
+            final userShortcutRef = _db
+                .collection('users')
+                .doc(userId)
+                .collection('active_queue')
+                .doc(restaurantId);
+
+            // Mark it as SERVED in their personal document history tree
+            transaction.update(userShortcutRef, {'status': 'SERVED'});
+          }
+        }
+      }
+
+      // Find the next waiting customer after the current serving number.
+      final nextTicketMatch = await ticketsRef
           .where('status', isEqualTo: 'WAITING')
+          .where('queue_number', isGreaterThan: currentServing)
+          .orderBy('queue_number')
           .limit(1)
           .get();
 
+      // If no waiting customer, set current_serving to 0.
+      if (nextTicketMatch.docs.isEmpty) {
+        transaction.update(queueRef, {
+          'current_serving': 0,
+        });
+        return;
+      }
+
+      final nextTicketData = nextTicketMatch.docs.first.data() as Map<String, dynamic>;
+
+      final nextQueueNumber = nextTicketData['queue_number'] ?? 0;
+
+      final nextUserId = nextTicketData['user_id'];
+
+      // Move next customer from WAITING to CALLED.
+      transaction.update(nextTicketMatch.docs.first.reference, {
+        'status': 'CALLED',
+        'called_at': FieldValue.serverTimestamp(),
+      });
+
+      // UPDATE USER PROFILE SUBCOLLECTION
+      if (nextUserId != null && nextUserId.toString().isNotEmpty) {
+        final userShortcutRef = _db
+            .collection('users')
+            .doc(nextUserId)
+            .collection('active_queue')
+            .doc(restaurantId);
+
+        transaction.update(userShortcutRef, {
+          'status': 'CALLED',
+          'called_at': FieldValue.serverTimestamp(),
+        });
+      }
+
+      transaction.update(queueRef, {
+        'current_serving': nextQueueNumber,
+      });
+    });
+  }
+
+  // Skip the no-show customer when staff pressing skip
+  Future<void> skipCurrentCustomer(String restaurantId) async {
+    final queueRef = _db.collection('queues').doc(restaurantId);
+    final ticketsRef = queueRef.collection('tickets');
+
+    await _db.runTransaction((transaction) async {
+      final queueSnapshot = await transaction.get(queueRef);
+
+      if (!queueSnapshot.exists) return;
+
+      // Convert Firestore document data into Map.
+      final queueData = queueSnapshot.data() as Map<String, dynamic>;
+      final currentServing = queueData['current_serving'] ?? 0;
+
+      if (currentServing <= 0) return;
+
+      // Find the ticket that has the same number as currentServing.
+      final ticketMatch = await ticketsRef
+          .where('queue_number', isEqualTo: currentServing)
+          .where('status', isEqualTo: 'CALLED')
+          .limit(1)
+          .get();
+
+      // If the ticket exists, update its status to CANCELLED.
       if (ticketMatch.docs.isNotEmpty) {
-        final DocumentSnapshot ticketDoc = ticketMatch.docs.first;
-        final Map<String, dynamic> ticketData = ticketDoc.data() as Map<String, dynamic>;
-        final String? userId = ticketData['user_id'];
+        final ticketDoc = ticketMatch.docs.first;
+        final ticketData = ticketDoc.data() as Map<String, dynamic>;
+        final userId = ticketData['user_id'];
 
-        // Update master archive log
-        transaction.update(ticketDoc.reference, {'status': 'SERVED'});
+        transaction.update(ticketDoc.reference, {
+          'status': 'CANCELLED',
+          'cancelled_at': FieldValue.serverTimestamp(),
+        });
 
-        // 2. 🚀 UPDATE USER PROFILE SUBCOLLECTION (Instead of deleting)
-        if (userId != null && userId.isNotEmpty) {
-          final DocumentReference userShortcutRef = _db
+        if (userId != null && userId.toString().isNotEmpty) {
+          final userShortcutRef = _db
               .collection('users')
               .doc(userId)
               .collection('active_queue')
               .doc(restaurantId);
 
-          // Mark it as SERVED in their personal document history tree
-          transaction.update(userShortcutRef, {'status': 'SERVED'});
+          transaction.update(userShortcutRef, {
+            'status': 'CANCELLED',
+            'cancelled_at': FieldValue.serverTimestamp(),
+          });
         }
       }
 
-      // 3. Increment the master branch serving tracker counter
       transaction.update(queueRef, {
-        'current_serving': currentServing + 1,
+        'current_serving': 0,
       });
     });
+  }
+
+  Stream<int> watchWaitingTicketCount(String restaurantId) {
+    return _db
+        .collection('queues')
+        .doc(restaurantId)
+        .collection('tickets')
+        .where('status', isEqualTo: 'WAITING')
+        .snapshots()
+        .map((snapshot) => snapshot.docs.length);
   }
 }

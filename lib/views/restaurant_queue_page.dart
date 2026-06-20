@@ -84,126 +84,156 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                         }
 
                         final queue = snapshot.data!;
+                        final hasCurrentCustomer = queue.currentServing > 0;
 
-                        return Padding(
-                          padding: const EdgeInsets.all(25.0),
-                          child: Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              Text(
-                                'Queue Management',
-                                style: TextStyle(
-                                  fontWeight: FontWeight(1000),
-                                  color: Color(0xFF006670),
-                                  fontSize: 25,
-                                ),
-                              ),
-                              SizedBox(height: 20),
-                              _buildAvailabilityToggle(),
-                              Container(
-                                width: double.infinity,
-                                padding: const EdgeInsets.all(20),
-                                decoration: BoxDecoration(
-                                  color: Color(0xFFF0F4F5),
-                                  borderRadius: BorderRadius.circular(20),
-                                  border: const Border(
-                                    left: BorderSide(color: Color(0xFF006670), width: 8),
+                        return StreamBuilder<int>(
+                          stream: viewmodel.watchWaitingTicketCount(selectedRestaurantId),
+                          builder: (context, waitingSnapshot){
+                            final waitingCount = waitingSnapshot.data ?? 0;
+                            final hasWaitingCustomer = waitingCount > 0;
+                            return Padding(
+                              padding: const EdgeInsets.all(25.0),
+                              child: Column(
+                                crossAxisAlignment: CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    'Queue Management',
+                                    style: TextStyle(
+                                      fontWeight: FontWeight(1000),
+                                      color: Color(0xFF006670),
+                                      fontSize: 25,
+                                    ),
                                   ),
-                                  boxShadow: [
-                                    BoxShadow(
-                                      color: Colors.black.withValues(alpha: 0.25),
-                                      blurRadius: 5,
-                                      offset: const Offset(2, 2),
-                                    ),
-                                  ],
-                                ),
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      '# ${queue.currentServing}',
-                                      style: TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                        fontSize: 40,
+                                  SizedBox(height: 20),
+                                  _buildAvailabilityToggle(),
+                                  Container(
+                                    width: double.infinity,
+                                    padding: const EdgeInsets.all(20),
+                                    decoration: BoxDecoration(
+                                      color: Color(0xFFF0F4F5),
+                                      borderRadius: BorderRadius.circular(20),
+                                      border: const Border(
+                                        left: BorderSide(color: Color(0xFF006670), width: 8),
                                       ),
-                                    ),
-                                    Text(
-                                      'Now Serving',
-                                      style: TextStyle(
-                                        color: Color(0xFF777777),
-                                        fontSize: 16,
-                                      ),
-                                    ),
-                                    Divider(height: 32),
-                                    Align(
-                                      alignment: Alignment.centerRight,
-                                      child: ElevatedButton.icon(
-                                        style: ElevatedButton.styleFrom(
-                                          backgroundColor: Color(0xFF006670),
-                                          padding: const EdgeInsets.only(left: 20, top: 10, right: 20, bottom: 10),
+                                      boxShadow: [
+                                        BoxShadow(
+                                          color: Colors.black.withValues(alpha: 0.25),
+                                          blurRadius: 5,
+                                          offset: const Offset(2, 2),
                                         ),
-                                        onPressed: (){
-                                          viewmodel.callNextCustomer(selectedRestaurantId);
-                                        },
-                                        icon: const Icon(
-                                          Icons.notifications,
-                                          color: Color(0xFFFFFFFF),
-                                          size: 20,
-                                        ),
-                                        label: const Text(
-                                          'Call Next',
+                                      ],
+                                    ),
+                                    child: Column(
+                                      crossAxisAlignment: CrossAxisAlignment.start,
+                                      children: [
+                                        Text(
+                                          '# ${queue.currentServing}',
                                           style: TextStyle(
-                                            color: Color(0xFFFFFFFF),
                                             fontWeight: FontWeight.bold,
-                                            fontSize: 20,
+                                            fontSize: 40,
                                           ),
                                         ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ),
-                              SizedBox(height: 30),
-                              Container(
-                                padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
-                                decoration: BoxDecoration(
-                                  color: const Color(0xFFDDF1F2),
-                                  borderRadius: BorderRadius.circular(16),
-                                ),
-                                child: Row(
-                                  children: [
-                                    Text(
-                                      '${queue.queueLength}',
-                                      style: const TextStyle(
-                                        fontSize: 35,
-                                        fontWeight: FontWeight(1000),
-                                      ),
-                                    ),
-                                    const SizedBox(width: 10),
-                                    const Text(
-                                      'Tables in Queue',
-                                      style: TextStyle(fontWeight: FontWeight.bold),
-                                    ),
-                                    const Spacer(),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
-                                      decoration: BoxDecoration(
-                                        color: const Color(0xFFF39850),
-                                        borderRadius: BorderRadius.circular(20),
-                                      ),
-                                      child: Text(
-                                        queue.waitStatus,
-                                        style: const TextStyle(
-                                          color: Colors.white,
-                                          fontWeight: FontWeight.bold,
+                                        Text(
+                                          'Now Serving',
+                                          style: TextStyle(
+                                            color: Color(0xFF777777),
+                                            fontSize: 16,
+                                          ),
                                         ),
-                                      ),
+                                        Divider(height: 32),
+                                        Align(
+                                          alignment: Alignment.centerRight,
+                                          child: Row(
+                                            mainAxisSize: MainAxisSize.min,
+                                            children: [
+                                              OutlinedButton.icon(
+                                                onPressed: hasCurrentCustomer
+                                                    ? () {
+                                                  viewmodel.skipCurrentCustomer(selectedRestaurantId);
+                                                }
+                                                    : null,
+                                                style: OutlinedButton.styleFrom(
+                                                  backgroundColor: const Color(0xFFFFF1F2),
+                                                  foregroundColor: Colors.redAccent,
+                                                  side: BorderSide(
+                                                    color: hasCurrentCustomer ? Colors.redAccent : Colors.grey,
+                                                  ),
+                                                ),
+                                                icon: const Icon(
+                                                  Icons.cancel_outlined,
+                                                ),
+                                                label: const Text('Skip'),
+                                              ),
+                                              const SizedBox(width: 10),
+                                              ElevatedButton.icon(
+                                                style: ElevatedButton.styleFrom(
+                                                  backgroundColor: Color(0xFF006670),
+                                                  padding: const EdgeInsets.only(left: 20, top: 10, right: 20, bottom: 10),
+                                                ),
+                                                onPressed: hasWaitingCustomer ? () {viewmodel.callNextCustomer(selectedRestaurantId);} : null,
+                                                icon: const Icon(
+                                                  Icons.notifications,
+                                                  color: Color(0xFFFFFFFF),
+                                                  size: 20,
+                                                ),
+                                                label: Text(
+                                                  hasWaitingCustomer ? 'Call Next' : 'No Customer',
+                                                  style: const TextStyle(
+                                                    color: Color(0xFFFFFFFF),
+                                                    fontWeight: FontWeight.bold,
+                                                    fontSize: 20,
+                                                  ),
+                                                ),
+                                              ),
+                                            ],
+                                          ),
+                                        ),
+                                      ],
                                     ),
-                                  ],
-                                ),
+                                  ),
+                                  SizedBox(height: 30),
+                                  Container(
+                                    padding: const EdgeInsets.symmetric(horizontal: 18, vertical: 14),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFDDF1F2),
+                                      borderRadius: BorderRadius.circular(16),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Text(
+                                          '$waitingCount',
+                                          style: const TextStyle(
+                                            fontSize: 35,
+                                            fontWeight: FontWeight(1000),
+                                          ),
+                                        ),
+                                        const SizedBox(width: 10),
+                                        const Text(
+                                          'Tables in Queue',
+                                          style: TextStyle(fontWeight: FontWeight.bold),
+                                        ),
+                                        const Spacer(),
+                                        Container(
+                                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
+                                          decoration: BoxDecoration(
+                                            color: const Color(0xFFF39850),
+                                            borderRadius: BorderRadius.circular(20),
+                                          ),
+                                          child: Text(
+                                            queue.waitStatus,
+                                            style: const TextStyle(
+                                              color: Colors.white,
+                                              fontWeight: FontWeight.bold,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ],
                               ),
-                            ],
-                          ),
+                            );
+                          }
                         );
                       }
                     );

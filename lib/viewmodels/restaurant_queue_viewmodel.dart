@@ -15,6 +15,10 @@ class RestaurantQueueViewmodel extends ChangeNotifier{
     return _queueService.watchRestaurantQueue(restaurantId);
   }
 
+  Stream<int> watchWaitingTicketCount(String restaurantId) {
+    return _queueService.watchWaitingTicketCount(restaurantId);
+  }
+
   // When staff presses Call Next
   Future<void> callNextCustomer(String restaurantId) async {
     isCallingNext = true;
@@ -26,6 +30,21 @@ class RestaurantQueueViewmodel extends ChangeNotifier{
       await _queueService.callNextCustomer(restaurantId);
     } catch(e) {
       errorMessage = 'Failed to call next customer';
+    } finally {
+      isCallingNext = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> skipCurrentCustomer(String restaurantId) async {
+    isCallingNext = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _queueService.skipCurrentCustomer(restaurantId);
+    } catch (e) {
+      errorMessage = 'Failed to skip customer';
     } finally {
       isCallingNext = false;
       notifyListeners();
