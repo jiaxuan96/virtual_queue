@@ -125,7 +125,7 @@ class CustomerHomeViewModel {
     final String statusString = currentQueueLength == 0 ? 'No waiting' : queue.waitStatus;
 
     Color badgeBgColor = const Color(0xFF008645); 
-    if (statusString == 'Short wait') badgeBgColor = const Color(0xFFF39850); 
+    if (statusString == 'Short Wait') badgeBgColor = const Color(0xFFF39850); 
     if (statusString == 'Moderate') badgeBgColor = const Color(0xFFFF7890); 
     if (statusString == 'Busy') badgeBgColor = const Color(0xFFBA1A1A); 
 

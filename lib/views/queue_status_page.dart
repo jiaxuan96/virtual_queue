@@ -539,6 +539,92 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
 
                 const SizedBox(height: 24),
 
+                SizedBox(
+                  width: double.infinity,
+                  height: 56,
+                  child: TextButton.icon(
+                    style: TextButton.styleFrom(
+                      backgroundColor: _viewModel.isCancelling ? Colors.red.withOpacity(0.05) : const Color(0xFFFFF1F1),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(16),
+                        side: BorderSide(
+                          color: _viewModel.isCancelling ? Colors.red.withOpacity(0.2) : const Color(0xFFFFD1D1),
+                          width: 1,
+                        ),
+                      ),
+                    ),
+                    onPressed: _viewModel.isCancelling 
+                        ? null 
+                        : () async {
+                            // Trigger beautiful double-check dialog before breaking queue data positioning
+                            final confirmCancel = await showDialog<bool>(
+                              context: context,
+                              builder: (BuildContext context) => AlertDialog(
+                                backgroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                                title: const Text(
+                                  'Leave Queue Line?',
+                                  style: TextStyle(fontFamily: 'Plus Jakarta Sans', fontWeight: FontWeight.bold),
+                                ),
+                                content: Text(
+                                  'Are you sure you want to cancel your spot? You will lose your position (#$streamTicketNumber) and have to join the queue again.',
+                                  style: TextStyle(fontFamily: 'Plus Jakarta Sans', color: Color(0xFF48626E)),
+                                ),
+                                actions: [
+                                  TextButton(
+                                    onPressed: () => Navigator.of(context).pop(false),
+                                    child: const Text('Keep My Spot', style: TextStyle(color: Color(0xFF006670), fontWeight: FontWeight.w600)),
+                                  ),
+                                  ElevatedButton(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: Colors.redAccent,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                                    ),
+                                    onPressed: () => Navigator.of(context).pop(true),
+                                    child: const Text('Yes, Leave Line', style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold)),
+                                  ),
+                                ],
+                              ),
+                            );
+
+                            // Execute cancellation sequence only if explicitly approved
+                            if (confirmCancel == true && context.mounted) {
+                              final String resId = state.queueData['restaurant_id'] ?? '';
+                              final String tktId = state.queueData['ticket_id'] ?? '';
+
+                              final bool success = await _viewModel.cancelActiveTicket(
+                                restaurantId: resId,
+                                ticketId: tktId,
+                              );
+
+                              if (success && context.mounted) {
+                                Navigator.of(context).popUntil((route) => route.isFirst);
+                              }
+                            }
+                          },
+                    icon: _viewModel.isCancelling
+                        ? const SizedBox(
+                            width: 18, 
+                            height: 18, 
+                            child: CircularProgressIndicator(strokeWidth: 2, color: Colors.redAccent)
+                          )
+                        : const Icon(Icons.cancel_outlined, color: Colors.redAccent, size: 20),
+                    label: Text(
+                      _viewModel.isCancelling ? 'Leaving Line...' : 'Cancel My Position',
+                      style: TextStyle(
+                        fontFamily: 'Plus Jakarta Sans',
+                        fontSize: 15,
+                        fontWeight: FontWeight.w700,
+                        color: _viewModel.isCancelling ? Colors.redAccent.withOpacity(0.5) : Colors.redAccent,
+                        letterSpacing: 0.2,
+                      ),
+                    ),
+                  ),
+                ),
+
+                const SizedBox(height: 24),
+
                 // BOTTOM BRANCH GEOLOCATION PROFILE PANEL
                 Container(
                   width: double.infinity,

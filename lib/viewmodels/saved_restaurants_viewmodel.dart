@@ -96,7 +96,7 @@ class SavedRestaurantsViewModel {
 
     // Map theme colors to match your view standards exactly
     Color badgeBgColor = const Color(0xFF008645); // Deep green
-    if (statusString == 'Short wait') badgeBgColor = const Color(0xFFF39850); // Warning orange
+    if (statusString == 'Short Wait') badgeBgColor = const Color(0xFFF39850); // Warning orange
     if (statusString == 'Moderate') badgeBgColor = const Color(0xFFFF7890); // Dark pink
     if (statusString == 'Busy') badgeBgColor = const Color(0xFFBA1A1A); // Red Alert
 

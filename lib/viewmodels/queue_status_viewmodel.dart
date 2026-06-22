@@ -80,10 +80,15 @@ import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:flutter/material.dart';
 import '../models/queue_status_state.dart';
+import '../services/queue_service.dart';
 
-class QueueStatusViewModel {
+class QueueStatusViewModel with ChangeNotifier {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
   final FirebaseAuth _auth = FirebaseAuth.instance;
+  final QueueService _queueService = QueueService();
+
+  bool _isCancelling = false;
+  bool get isCancelling => _isCancelling;
 
   // Future<Map<String, dynamic>?> fetchActiveUserTicket() async {
   //   final String? currentUserId = _auth.currentUser?.uid;
@@ -136,7 +141,7 @@ class QueueStatusViewModel {
           .collection('users')
           .doc(currentUserId)
           .collection('active_queue')
-          .where('status', isEqualTo: 'WAITING')
+          .where('status', whereIn: ['WAITING', 'CALLED'])
           .limit(1)
           .get();
 
@@ -170,7 +175,7 @@ class QueueStatusViewModel {
         .collection('users')
         .doc(user.uid)
         .collection('active_queue')
-        .where('status', isEqualTo: 'WAITING')
+        .where('status', whereIn: ['WAITING', 'CALLED'])
         .limit(1)
         .snapshots()
         .switchMap((userShortcutSnap) {
@@ -206,6 +211,7 @@ class QueueStatusViewModel {
               'ticket_id': shortcutData['ticket_id'] ?? '',
               'brand_id': brandId,
               'restaurant_id': restaurantId,
+              'user_ticket_status': shortcutData['status'] ?? 'WAITING',
             };
 
             // D. Fetch static reference blocks for copywriting strings
@@ -224,5 +230,31 @@ class QueueStatusViewModel {
             );
           });
         });
+  }
+
+  /// ❌ ACTION ROUTE: Called when the user clicks "Cancel My Position" on the Status Screen
+  Future<bool> cancelActiveTicket({
+    required String restaurantId,
+    required String ticketId,
+  }) async {
+    final user = _auth.currentUser;
+    if (user == null || ticketId.isEmpty || restaurantId.isEmpty) {
+      debugPrint('⚠️ [Queue Status VM] Cancel aborted: Missing session credentials or document identifiers.');
+      return false;
+    }
+
+    _isCancelling = true;
+    notifyListeners(); // Updates UI to show a spinner on the cancel button
+
+    // Execute the unified atomic batch cancellation in QueueService
+    final bool success = await _queueService.cancelQueueTicket(
+      userId: user.uid,
+      restaurantId: restaurantId,
+      ticketId: ticketId,
+    );
+
+    _isCancelling = false;
+    notifyListeners();
+    return success;
   }
 }

@@ -426,7 +426,7 @@ class _ExploreTabContentState extends State<ExploreTabContent> {
                     child: Padding(
                       padding: const EdgeInsets.only(top: 40.0),
                       child: Text(
-                        'No matching locations found.',
+                        'No matching restaurants found.',
                         style: TextStyle(
                           fontFamily: 'Plus Jakarta Sans', 
                           fontSize: 16,

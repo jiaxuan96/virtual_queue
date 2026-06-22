@@ -91,6 +91,50 @@ class QueueService {
     });
   }
 
+  Future<bool> cancelQueueTicket({
+    required String userId,
+    required String restaurantId,
+    required String ticketId,
+  }) async {
+    // 🎯 FIXED: Replaced uninitialized '_firestore' references with your class instance variables '_db'
+    final WriteBatch batch = _db.batch();
+
+    // 🎯 FIXED PATH CORRECTION: In joinQueue, user records are saved using 'restaurantId' as document ID
+    final DocumentReference userQueueRef = _db
+        .collection('users')
+        .doc(userId)
+        .collection('active_queue')
+        .doc(restaurantId);
+
+    // Path to the restaurant's specific ticket node
+    final DocumentReference restaurantTicketRef = _db
+        .collection('queues')
+        .doc(restaurantId)
+        .collection('tickets')
+        .doc(ticketId);
+
+    try {
+      debugPrint('🎬 [QueueService] Initializing Cancellation Batch for Ticket: $ticketId');
+
+      // Step A: Remove the tracking shortcut from the user's active subcollection
+      batch.delete(userQueueRef);
+
+      // Step B: Mark the status field as "CANCELLED" inside the restaurant queues nested path
+      batch.update(restaurantTicketRef, {
+        'status': 'CANCELLED',
+        'cancelled_at': FieldValue.serverTimestamp(), 
+      });
+
+      // Commit both operations together atomically
+      await batch.commit();
+      debugPrint('✅ [QueueService] Batch commit complete. Ticket $ticketId successfully cancelled.');
+      return true;
+    } catch (e) {
+      debugPrint('🚨 [QueueService Failure] Cancel transaction aborted: $e');
+      return false;
+    }
+  }
+
   // --- Restaurant Side --- //
   // Listens to live queue changes from Firestore
   Stream<RestaurantQueueModel> watchRestaurantQueue(String restaurantId) {
