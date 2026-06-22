@@ -11,7 +11,7 @@ class UserProfileViewModel extends ChangeNotifier {
   bool _isLoading = false;
   UserProfile? _cachedProfile; 
   
-  // A map to hold all dynamic unmapped fields from Firestore (e.g., phone, gender, birthday, points)
+  // A map to hold all dynamic unmapped fields from Firestore
   Map<String, dynamic> _allFieldsMap = {}; 
 
   bool get isLoading => _isLoading;
@@ -24,7 +24,7 @@ class UserProfileViewModel extends ChangeNotifier {
     fetchRealUserData();
   }
 
-  /// 📥 FETCH: Pulls the complete user document dynamically from Firestore
+  /// FETCH: Pulls the complete user document dynamically from Firestore
   Future<void> fetchRealUserData() async {
     final User? currentUser = _auth.currentUser;
     if (currentUser == null) return;

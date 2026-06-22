@@ -130,7 +130,7 @@ class RestaurantCardViewModel {
       final String branchNameOnly = restaurantData['branch_name'] ?? 'Our Branch';
 
       // 🤝 STEP 3: String interpolation to join them exactly as requested
-      final String fullFormattedBranchName = "$brandName - $branchNameOnly";
+      final String fullFormattedBranchName = "$brandName ($branchNameOnly)";
 
       debugPrint('📝 [Email System] Combined Output String: "$fullFormattedBranchName"');
 
@@ -150,7 +150,6 @@ class RestaurantCardViewModel {
     required String branchName,
     required String queueNumber,
   }) async {
-    // 🔑 Replace these safely with your free sandbox dashboard tokens from EmailJS
     const String serviceId = "service_otndmwn";
     const String templateId = "template_v790uff";
     const String publicKey = "m0-pjpXqF0pD4BpH4";
@@ -172,7 +171,7 @@ class RestaurantCardViewModel {
             'user_email': userEmail,
             'branch_name': branchName,
             'queue_number': queueNumber,
-            'issue_time': DateTime.now().toString().split('.')[0], // Strips milliseconds cleanly
+            'issue_time': DateTime.now().toString().split('.')[0], 
           }
         }),
       );
