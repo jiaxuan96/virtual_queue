@@ -487,7 +487,6 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                       },
                     ),
                     SizedBox(height: 3),
-                    if (widget.restaurantIds.length > 1)
                     Row(
                       children: [
                         Icon(

@@ -1,9 +1,13 @@
 import 'package:cloud_firestore/cloud_firestore.dart';
 import 'package:virtual_queue/models/restaurant_queue_model.dart';
 import 'package:flutter/material.dart';
+import 'dart:async';
+import 'package:virtual_queue/services/restaurant_notification_email_service.dart';
 
 class QueueService {
+
   final FirebaseFirestore _db = FirebaseFirestore.instance;
+  final RestaurantNotificationEmailService _emailService = RestaurantNotificationEmailService();
 
   // Function to join a restaurant's queue 
   Future<int?> joinQueue({
@@ -154,6 +158,10 @@ class QueueService {
     final queueRef = _db.collection('queues').doc(restaurantId);
     final ticketsRef = queueRef.collection('tickets');
 
+    // store the called customer info
+    String? calledUserId;
+    int? calledQueueNumber;
+
     await _db.runTransaction((transaction) async {
       final queueSnapshot = await transaction.get(queueRef);
       if (!queueSnapshot.exists) return;
@@ -214,6 +222,9 @@ class QueueService {
 
       final nextUserId = nextTicketData['user_id'];
 
+      calledUserId = nextUserId?.toString();
+      calledQueueNumber = nextQueueNumber;
+
       // Move next customer from WAITING to CALLED.
       transaction.update(nextTicketMatch.docs.first.reference, {
         'status': 'CALLED',
@@ -238,12 +249,49 @@ class QueueService {
         'current_serving': nextQueueNumber,
       });
     });
+    if (calledUserId != null && calledQueueNumber != null) {
+      final userDoc = await _db.collection('users').doc(calledUserId).get();
+      final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+
+      final userName = userData['name'] ?? 'Customer';
+      final userEmail = userData['email'];
+
+      final queueDoc = await queueRef.get();
+      final queueData = queueDoc.data() as Map<String, dynamic>? ?? {};
+      final brandId = queueData['brand_id'];
+
+      String restaurantName = restaurantId;
+
+      if (brandId != null) {
+        final brandDoc = await _db
+            .collection('restaurant_brands')
+            .doc(brandId)
+            .get();
+
+        final brandData = brandDoc.data() as Map<String, dynamic>? ?? {};
+        restaurantName = brandData['name'] ?? restaurantId;
+      }
+
+      if (userEmail != null && userEmail.toString().isNotEmpty) {
+        unawaited(
+          _emailService.sendQueueCalledEmail(
+            userName: userName,
+            userEmail: userEmail,
+            restaurantName: restaurantName,
+            queueNumber: calledQueueNumber!,
+          ),
+        );
+      }
+    }
   }
 
   // Skip the no-show customer when staff pressing skip
   Future<void> skipCurrentCustomer(String restaurantId) async {
     final queueRef = _db.collection('queues').doc(restaurantId);
     final ticketsRef = queueRef.collection('tickets');
+
+    String? cancelledUserId;
+    int? cancelledQueueNumber;
 
     await _db.runTransaction((transaction) async {
       final queueSnapshot = await transaction.get(queueRef);
@@ -269,6 +317,9 @@ class QueueService {
         final ticketData = ticketDoc.data() as Map<String, dynamic>;
         final userId = ticketData['user_id'];
 
+        cancelledUserId = userId?.toString();
+        cancelledQueueNumber = currentServing;
+
         transaction.update(ticketDoc.reference, {
           'status': 'CANCELLED',
           'cancelled_at': FieldValue.serverTimestamp(),
@@ -292,6 +343,40 @@ class QueueService {
         'current_serving': 0,
       });
     });
+    if (cancelledUserId != null && cancelledQueueNumber != null) {
+      final userDoc = await _db.collection('users').doc(cancelledUserId).get();
+      final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+
+      final userName = userData['name'] ?? 'Customer';
+      final userEmail = userData['email'];
+
+      final queueDoc = await queueRef.get();
+      final queueData = queueDoc.data() as Map<String, dynamic>? ?? {};
+      final brandId = queueData['brand_id'];
+
+      String restaurantName = restaurantId;
+
+      if (brandId != null) {
+        final brandDoc = await _db
+            .collection('restaurant_brands')
+            .doc(brandId)
+            .get();
+
+        final brandData = brandDoc.data() as Map<String, dynamic>? ?? {};
+        restaurantName = brandData['name'] ?? restaurantId;
+      }
+
+      if (userEmail != null && userEmail.toString().isNotEmpty) {
+        unawaited(
+          _emailService.sendQueueCancelledEmail(
+            userName: userName,
+            userEmail: userEmail,
+            restaurantName: restaurantName,
+            queueNumber: cancelledQueueNumber!,
+          ),
+        );
+      }
+    }
   }
 
   Stream<int> watchWaitingTicketCount(String restaurantId) {

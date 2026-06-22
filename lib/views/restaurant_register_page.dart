@@ -25,6 +25,7 @@ class _RestaurantRegisterPageState extends State<RestaurantRegisterPage> {
 
   final restaurantNameController = TextEditingController();
   final restaurantAddressController = TextEditingController();
+  final restaurantAreaController = TextEditingController();
   final businessRegistrationNoController = TextEditingController();
 
   final ownerNameController = TextEditingController();
@@ -53,7 +54,7 @@ class _RestaurantRegisterPageState extends State<RestaurantRegisterPage> {
 
     if (branchCount == 1) {
       branches.add({
-        'branch_name': restaurantNameController.text.trim(),
+        'branch_name': restaurantAreaController.text.trim(),
         'address': restaurantAddressController.text.trim(),
       });
     } else {
@@ -98,6 +99,7 @@ class _RestaurantRegisterPageState extends State<RestaurantRegisterPage> {
     branchCountController.dispose();
     restaurantNameController.dispose();
     restaurantAddressController.dispose();
+    restaurantAreaController.dispose();
     businessRegistrationNoController.dispose();
     ownerNameController.dispose();
     ownerEmailController.dispose();
@@ -324,6 +326,11 @@ class _RestaurantRegisterPageState extends State<RestaurantRegisterPage> {
         buildTextField(
           'No.0, Street Rainbow, ...',
           controller: restaurantAddressController,
+        ),
+        buildLabel('Branch/Area Name'),
+        buildTextField(
+          'e.g. Georgetown',
+          controller: restaurantAreaController,
         ),
       ],
     );
