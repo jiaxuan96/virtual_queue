@@ -20,7 +20,7 @@ class QueueService {
         .collection('users')
         .doc(userId)
         .collection('active_queue')
-        .where('status', isEqualTo: 'WAITING')
+        .where('status', whereIn: ['WAITING', 'CALLED'])
         .limit(1)
         .get();
 
@@ -373,6 +373,167 @@ class QueueService {
             userEmail: userEmail,
             restaurantName: restaurantName,
             queueNumber: cancelledQueueNumber!,
+            reason: 'Your queue was cancelled by the restaurant.',
+          ),
+        );
+      }
+    }
+  }
+
+  Future<void> markCurrentCustomerServed(String restaurantId) async {
+    final queueRef = _db.collection('queues').doc(restaurantId);
+    final ticketsRef = queueRef.collection('tickets');
+
+    final queueSnapshot = await queueRef.get();
+
+    if (!queueSnapshot.exists) return;
+
+    final queueData = queueSnapshot.data() as Map<String, dynamic>;
+    final currentServing = queueData['current_serving'] ?? 0;
+
+    if (currentServing <= 0) return;
+
+    final ticketMatch = await ticketsRef
+        .where('queue_number', isEqualTo: currentServing)
+        .where('status', isEqualTo: 'CALLED')
+        .limit(1)
+        .get();
+
+    if (ticketMatch.docs.isEmpty) return;
+
+    final ticketDoc = ticketMatch.docs.first;
+    final ticketData = ticketDoc.data() as Map<String, dynamic>;
+    final userId = ticketData['user_id'];
+
+    final batch = _db.batch();
+
+    batch.update(ticketDoc.reference, {
+      'status': 'SERVED',
+      'served_at': FieldValue.serverTimestamp(),
+    });
+
+    if (userId != null && userId.toString().isNotEmpty) {
+      final userShortcutRef = _db
+          .collection('users')
+          .doc(userId)
+          .collection('active_queue')
+          .doc(restaurantId);
+
+      batch.update(userShortcutRef, {
+        'status': 'SERVED',
+        'served_at': FieldValue.serverTimestamp(),
+      });
+    }
+
+    batch.update(queueRef, {
+      'current_serving': 0,
+    });
+
+    await batch.commit();
+  }
+
+  Future<void> resetQueue(String restaurantId) async {
+    final queueRef = _db.collection('queues').doc(restaurantId);
+    final ticketsRef = queueRef.collection('tickets');
+
+    final waitingCustomersToEmail = <Map<String, dynamic>>[];
+
+    final activeTickets = await ticketsRef
+        .where('status', whereIn: ['WAITING', 'CALLED'])
+        .get();
+
+    final batch = _db.batch();
+
+    for (final ticket in activeTickets.docs) {
+      // gets the fields inside the ticket document
+      final ticketData = ticket.data() as Map<String, dynamic>;
+      // gets the customer’s user ID from the ticket
+      final userId = ticketData['user_id'];
+
+      final status = ticketData['status'];
+      final queueNumber = ticketData['queue_number'];
+
+      if (status == 'WAITING' &&
+          userId != null &&
+          userId.toString().isNotEmpty &&
+          queueNumber != null) {
+        waitingCustomersToEmail.add({
+          'user_id': userId.toString(),
+          'queue_number': queueNumber,
+        });
+      }
+
+      // only WAITING and CALLED ticket change to expired
+      batch.update(ticket.reference, {
+        'status': 'EXPIRED',
+        'expired_at': FieldValue.serverTimestamp(),
+      });
+
+      // Update the user's active_queue record so the customer side will stop showing it.
+      if (userId != null && userId.toString().isNotEmpty) {
+        final userShortcutRef = _db
+            .collection('users')
+            .doc(userId)
+            .collection('active_queue')
+            .doc(restaurantId);
+
+        batch.update(userShortcutRef, {
+          'status': 'EXPIRED',
+          'expired_at': FieldValue.serverTimestamp(),
+        });
+      }
+    }
+
+    batch.set(
+      queueRef,
+      {
+        'current_serving': 0,
+        'next_available_number': 1,
+        'last_reset_at': FieldValue.serverTimestamp(),
+      },
+      SetOptions(merge: true),
+    );
+
+    // Commit all ticket, user, and queue updates.
+    await batch.commit();
+
+    final queueDoc = await queueRef.get();
+    final queueData = queueDoc.data() as Map<String, dynamic>? ?? {};
+    final brandId = queueData['brand_id'];
+
+    String restaurantName = restaurantId;
+
+    if (brandId != null) {
+      final brandDoc = await _db
+          .collection('restaurant_brands')
+          .doc(brandId)
+          .get();
+
+      final brandData = brandDoc.data() as Map<String, dynamic>? ?? {};
+      restaurantName = brandData['name'] ?? restaurantId;
+    }
+
+    // Send reset email only to customers who were WAITING before the reset.
+    for (final customer in waitingCustomersToEmail) {
+      final userId = customer['user_id'];
+      final queueNumber = customer['queue_number'];
+
+      // Fetch customer profile to get their name and email address.
+      final userDoc = await _db.collection('users').doc(userId).get();
+      final userData = userDoc.data() as Map<String, dynamic>? ?? {};
+
+      final userName = userData['name'] ?? 'Customer';
+      final userEmail = userData['email'];
+
+      // Send email only if the user has an email address.
+      if (userEmail != null && userEmail.toString().isNotEmpty) {
+        unawaited(
+          _emailService.sendQueueCancelledEmail(
+            userName: userName,
+            userEmail: userEmail,
+            restaurantName: restaurantName,
+            queueNumber: queueNumber,
+            reason: 'The restaurant reset the queue.',
           ),
         );
       }

@@ -31,6 +31,7 @@ class RestaurantNotificationEmailService {
     required String userEmail,
     required String restaurantName,
     required int queueNumber,
+    required String reason,
   }) async {
     await _sendEmail(
       templateId: cancelledTemplateId,
@@ -39,6 +40,7 @@ class RestaurantNotificationEmailService {
         'user_email': userEmail,
         'restaurant_name': restaurantName,
         'queue_number': queueNumber.toString(),
+        'reason': reason,
       },
     );
   }

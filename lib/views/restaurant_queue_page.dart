@@ -91,18 +91,47 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                           builder: (context, waitingSnapshot){
                             final waitingCount = waitingSnapshot.data ?? 0;
                             final hasWaitingCustomer = waitingCount > 0;
+                            final servedCustomer = hasCurrentCustomer && !hasWaitingCustomer;
+                            final callButtonText = hasWaitingCustomer
+                                ? 'Call Next'
+                                : servedCustomer
+                                ? 'Served'
+                                : 'No Customer';
+
+                            final callButtonIcon = hasWaitingCustomer
+                                ? Icons.notifications
+                                : servedCustomer
+                                ? Icons.check_circle
+                                : Icons.notifications_off;
                             return Padding(
                               padding: const EdgeInsets.all(25.0),
                               child: Column(
                                 crossAxisAlignment: CrossAxisAlignment.start,
                                 children: [
-                                  Text(
-                                    'Queue Management',
-                                    style: TextStyle(
-                                      fontWeight: FontWeight(1000),
-                                      color: Color(0xFF006670),
-                                      fontSize: 25,
-                                    ),
+                                  Row(
+                                    children: [
+                                      Text(
+                                        'Queue Management',
+                                        style: TextStyle(
+                                          fontWeight: FontWeight(1000),
+                                          color: Color(0xFF006670),
+                                          fontSize: 25,
+                                        ),
+                                      ),
+                                      const Spacer(),
+                                      IconButton(
+                                        onPressed: () async {
+                                          final confirmReset = await _showResetQueueDialog();
+                                          if (confirmReset == true) {
+                                            await viewmodel.resetQueue(selectedRestaurantId);
+                                          }
+                                        },
+                                        icon: Icon(
+                                          Icons.restart_alt,
+                                          color: Color(0xFF006670),
+                                        )
+                                      ),
+                                    ],
                                   ),
                                   SizedBox(height: 20),
                                   _buildAvailabilityToggle(),
@@ -148,8 +177,11 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                                             children: [
                                               OutlinedButton.icon(
                                                 onPressed: hasCurrentCustomer
-                                                    ? () {
-                                                  viewmodel.skipCurrentCustomer(selectedRestaurantId);
+                                                    ? () async {
+                                                  final confirmSkip = await _showSkipConfirmationDialog();
+                                                  if (confirmSkip == true) {
+                                                    await viewmodel.skipCurrentCustomer(selectedRestaurantId);
+                                                  }
                                                 }
                                                     : null,
                                                 style: OutlinedButton.styleFrom(
@@ -170,14 +202,22 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                                                   backgroundColor: Color(0xFF006670),
                                                   padding: const EdgeInsets.only(left: 20, top: 10, right: 20, bottom: 10),
                                                 ),
-                                                onPressed: hasWaitingCustomer ? () {viewmodel.callNextCustomer(selectedRestaurantId);} : null,
-                                                icon: const Icon(
-                                                  Icons.notifications,
+                                                onPressed: hasWaitingCustomer
+                                                    ? () {
+                                                  viewmodel.callNextCustomer(selectedRestaurantId);
+                                                }
+                                                    : servedCustomer
+                                                    ? () {
+                                                  viewmodel.markCurrentCustomerServed(selectedRestaurantId);
+                                                }
+                                                    : null,
+                                                icon: Icon(
+                                                  callButtonIcon,
                                                   color: Color(0xFFFFFFFF),
                                                   size: 20,
                                                 ),
                                                 label: Text(
-                                                  hasWaitingCustomer ? 'Call Next' : 'No Customer',
+                                                  callButtonText,
                                                   style: const TextStyle(
                                                     color: Color(0xFFFFFFFF),
                                                     fontWeight: FontWeight.bold,
@@ -656,6 +696,88 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
             ),
           ],
         ),
+      ),
+    );
+  }
+
+  Future<bool?> _showSkipConfirmationDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Skip Customer',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to skip the queue?',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF48626E),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Skip Queue',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            )
+          ),
+        ],
+      ),
+    );
+  }
+
+  Future<bool?> _showResetQueueDialog() {
+    return showDialog<bool>(
+      context: context,
+      builder: (context) => AlertDialog(
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(20),
+        ),
+        title: const Text(
+          'Reset Queue',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        content: const Text(
+          'Are you sure you want to reset the queue? Waiting and called tickets will be marked as expired.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context, false),
+            child: const Text(
+              'Cancel',
+              style: TextStyle(
+                color: Color(0xFF48626E),
+              ),
+            ),
+          ),
+          TextButton(
+            onPressed: () => Navigator.pop(context, true),
+            child: const Text(
+              'Reset',
+              style: TextStyle(
+                color: Colors.redAccent,
+                fontWeight: FontWeight.bold,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
