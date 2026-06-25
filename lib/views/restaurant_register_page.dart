@@ -33,6 +33,8 @@ class _RestaurantRegisterPageState extends State<RestaurantRegisterPage> {
   final ownerPhoneController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
+  bool isPasswordVisible = false;
+  bool isConfirmPasswordVisible = false;
 
   final branchNameControllers = <TextEditingController>[];
   final branchAddressControllers = <TextEditingController>[];
@@ -417,16 +419,38 @@ class _RestaurantRegisterPageState extends State<RestaurantRegisterPage> {
 
         buildLabel('Password'),
         buildTextField(
-          '••••••',
-          obscureText: true,
+          'password',
+          obscureText: !isPasswordVisible,
           controller: passwordController,
+          suffixIcon: IconButton(
+            icon: Icon(
+              isPasswordVisible ? Icons.visibility_off : Icons.visibility,
+              color: Colors.grey,
+            ),
+            onPressed: () {
+              setState(() {
+                isPasswordVisible = !isPasswordVisible;
+              });
+            },
+          ),
         ),
 
-        buildLabel('Confirm Password'),
+        buildLabel('Password'),
         buildTextField(
-          '••••••',
-          obscureText: true,
+          'confirm password',
+          obscureText: !isConfirmPasswordVisible,
           controller: confirmPasswordController,
+          suffixIcon: IconButton(
+            icon: Icon(
+              isConfirmPasswordVisible ? Icons.visibility_off : Icons.visibility,
+              color: Colors.grey,
+            ),
+            onPressed: () {
+              setState(() {
+                isConfirmPasswordVisible = !isConfirmPasswordVisible;
+              });
+            },
+          ),
         ),
 
         SizedBox(height: 20),
@@ -551,6 +575,7 @@ class _RestaurantRegisterPageState extends State<RestaurantRegisterPage> {
       TextEditingController? controller,
       bool obscureText = false,
       int maxLines = 1,
+      Widget? suffixIcon,
   }) {
     final double radius = maxLines > 1 ? 25 : 40;
 
@@ -576,6 +601,7 @@ class _RestaurantRegisterPageState extends State<RestaurantRegisterPage> {
             maxLines: obscureText ? 1 : maxLines,
             decoration: InputDecoration(
               hintText: hintText,
+              suffixIcon: suffixIcon,
               hintStyle: TextStyle(
                 color: Colors.grey,
               ),

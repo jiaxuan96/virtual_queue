@@ -20,6 +20,7 @@ class _LoginPageState  extends State<LoginPage>{
 
   final emailController = TextEditingController();
   final passwordController = TextEditingController();
+  bool isPasswordVisible = false;
 
   Future<void> login() async {
     final profile = await viewModel.login(
@@ -194,11 +195,24 @@ class _LoginPageState  extends State<LoginPage>{
                           ),
                           child: TextField(
                             controller: passwordController,
-                            obscureText: true,
+                            obscureText: !isPasswordVisible,
                             decoration: InputDecoration(
                               hintText: 'password',
                               hintStyle: TextStyle(
                                 color: Colors.grey,
+                              ),
+                              suffixIcon: IconButton(
+                                icon: Icon(
+                                  isPasswordVisible
+                                      ? Icons.visibility_off
+                                      : Icons.visibility,
+                                  color: Colors.grey,
+                                ),
+                                onPressed: () {
+                                  setState(() {
+                                    isPasswordVisible = !isPasswordVisible;
+                                  });
+                                },
                               ),
                               filled: false,
                               fillColor: Color(0xFFFFFFFF),

@@ -20,6 +20,8 @@ class _CustomerRegisterPageState extends State<CustomerRegisterPage> {
   final phoneController = TextEditingController();
   final passwordController = TextEditingController();
   final confirmPasswordController = TextEditingController();
+  bool isPasswordVisible = false;
+  bool isConfirmPasswordVisible = false;
 
   Future<void> registerCustomer() async {
     final profile = await viewModel.registerCustomer(
@@ -214,11 +216,24 @@ class _CustomerRegisterPageState extends State<CustomerRegisterPage> {
               ),
               child: TextField(
                 controller: passwordController,
-                obscureText: true,
+                obscureText: !isPasswordVisible,
                 decoration: InputDecoration(
                   hintText: 'password',
                   hintStyle: TextStyle(
                     color: Colors.grey,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      isPasswordVisible
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        isPasswordVisible = !isPasswordVisible;
+                      });
+                    },
                   ),
                   filled: false,
                   fillColor: Color(0xFFFFFFFF),
@@ -253,11 +268,24 @@ class _CustomerRegisterPageState extends State<CustomerRegisterPage> {
               ),
               child: TextField(
                 controller: confirmPasswordController,
-                obscureText: true,
+                obscureText: !isConfirmPasswordVisible,
                 decoration: InputDecoration(
-                  hintText: 'password',
+                  hintText: 'confirm password',
                   hintStyle: TextStyle(
                     color: Colors.grey,
+                  ),
+                  suffixIcon: IconButton(
+                    icon: Icon(
+                      isConfirmPasswordVisible
+                          ? Icons.visibility_off
+                          : Icons.visibility,
+                      color: Colors.grey,
+                    ),
+                    onPressed: () {
+                      setState(() {
+                        isConfirmPasswordVisible = !isConfirmPasswordVisible;
+                      });
+                    },
                   ),
                   filled: false,
                   fillColor: Color(0xFFFFFFFF),
