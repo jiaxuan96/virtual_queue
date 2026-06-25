@@ -5,17 +5,17 @@ class RestaurantDetailState {
   final Map<String, dynamic> brandData;
   final Map<String, dynamic> restaurantData;
   final Map<String, dynamic> queueData;
+  final int waitingCount;
 
   RestaurantDetailState({
     required this.brandData,
     required this.restaurantData,
     required this.queueData,
+    required this.waitingCount,
   });
 
-  // Business Logic: Computing Badge UI Attributes dynamically
   int get queueLength {
-    int peopleAhead = (queueData['next_available_number'] ?? 1) - (queueData['current_serving'] ?? 0) - 1;
-    return peopleAhead > 0 ? peopleAhead : 0;
+    return waitingCount;
   }
 
   String get badgeText {

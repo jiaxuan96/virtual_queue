@@ -51,6 +51,36 @@ class RestaurantQueueViewmodel extends ChangeNotifier{
     }
   }
 
+  Future<void> markCurrentCustomerServed(String restaurantId) async {
+    isCallingNext = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _queueService.markCurrentCustomerServed(restaurantId);
+    } catch (e) {
+      errorMessage = 'Failed to mark customer as served';
+    } finally {
+      isCallingNext = false;
+      notifyListeners();
+    }
+  }
+
+  Future<void> resetQueue(String restaurantId) async {
+    isCallingNext = true;
+    errorMessage = null;
+    notifyListeners();
+
+    try {
+      await _queueService.resetQueue(restaurantId);
+    } catch (e) {
+      errorMessage = 'Failed to reset queue';
+    } finally {
+      isCallingNext = false;
+      notifyListeners();
+    }
+  }
+
   Future<void> updateRestaurantAvailability({
     required String restaurantBrandId,
     required String restaurantId,

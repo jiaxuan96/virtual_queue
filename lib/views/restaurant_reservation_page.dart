@@ -314,7 +314,6 @@ class _RestaurantReservationPageState extends State<RestaurantReservationPage>{
                       },
                     ),
                     SizedBox(height: 3),
-                    if (widget.restaurantIds.length > 1)
                     Row(
                       children: [
                         Icon(
