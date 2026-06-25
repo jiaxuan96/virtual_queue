@@ -93,6 +93,15 @@ class CustomerHomeViewModel {
           // 🟢 3. FETCH LIVE QUEUES
           final queueDoc = await _firestore.collection('queues').doc(restaurantId).get();
 
+          final waitingTicketsSnap = await _firestore
+              .collection('queues')
+              .doc(restaurantId)
+              .collection('tickets')
+              .where('status', isEqualTo: 'WAITING')
+              .get();
+
+          final waitingCount = waitingTicketsSnap.docs.length;
+
           RestaurantQueueModel queueModel;
           if (queueDoc.exists) {
             queueModel = RestaurantQueueModel.fromMap(queueDoc.data()!, queueDoc.id);
@@ -105,7 +114,14 @@ class CustomerHomeViewModel {
             }, restaurantId);
           }
 
-          final cardState = _calculateCardPresentation(restaurantModel, brandModel, queueModel, isActive);
+          final cardState = _calculateCardPresentation(
+            restaurantModel,
+            brandModel,
+            queueModel,
+            isActive,
+            waitingCount,
+          );
+
           displayCards.add(cardState);
         }
       } catch (e) {
@@ -120,8 +136,9 @@ class CustomerHomeViewModel {
     RestaurantBrandModel brand,
     RestaurantQueueModel queue,
     bool isActive,
+    int waitingCount,
   ) {
-    final int currentQueueLength = queue.queueLength;
+    final int currentQueueLength = waitingCount;
     final String statusString = currentQueueLength == 0 ? 'No waiting' : queue.waitStatus;
 
     Color badgeBgColor = const Color(0xFF008645); 
