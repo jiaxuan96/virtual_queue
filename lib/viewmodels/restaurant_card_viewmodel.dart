@@ -49,6 +49,15 @@ class RestaurantCardViewModel {
       final restMap = restSnap.data() as Map<String, dynamic>? ?? {};
       final queueMap = queueSnap.data() as Map<String, dynamic>? ?? {};
 
+      final waitingTicketsSnap = await _firestore
+          .collection('queues')
+          .doc(restaurantId)
+          .collection('tickets')
+          .where('status', isEqualTo: 'WAITING')
+          .get();
+
+      final waitingCount = waitingTicketsSnap.docs.length;
+
       // 🔍 Debug logs to verify structural sync is succeeding
       debugPrint('📦 [VM Payload Result] Brands Doc Exists: ${brandSnap.exists} -> Keys: ${brandMap.keys.toList()}');
       debugPrint('📦 [VM Payload Result] Restaurants Subdoc Exists: ${restSnap.exists} -> Keys: ${restMap.keys.toList()}');
@@ -58,6 +67,7 @@ class RestaurantCardViewModel {
         brandData: brandMap,
         restaurantData: restMap,
         queueData: queueMap,
+        waitingCount: waitingCount,
       );
     });
   }
