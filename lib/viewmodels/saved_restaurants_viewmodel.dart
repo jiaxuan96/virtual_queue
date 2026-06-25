@@ -73,8 +73,23 @@ class SavedRestaurantsViewModel {
                 }, restaurantId);
               }
 
+              final waitingTicketsSnap = await _firestore
+                  .collection('queues')
+                  .doc(restaurantId)
+                  .collection('tickets')
+                  .where('status', isEqualTo: 'WAITING')
+                  .get();
+
+              final waitingCount = waitingTicketsSnap.docs.length;
+
               // 4. Transform models into UI Presentation States
-              final cardState = _calculateCardPresentation(restaurantModel, brandModel, queueModel, isActive);
+              final cardState = _calculateCardPresentation(
+                restaurantModel,
+                brandModel,
+                queueModel,
+                isActive,
+                waitingCount,
+              );
               bookmarkedCards.add(cardState);
             } catch (e) {
               debugPrint('🚨 [ViewModel Loop Exception] Processing bookmark failed: $e');
@@ -89,9 +104,10 @@ class SavedRestaurantsViewModel {
     RestaurantBrandModel brand,
     RestaurantQueueModel queue,
     bool isActive,
+    int waitingCount,
   ) {
     // Safely parse out standard data state sizes
-    final int currentQueueLength = queue.queueLength;
+    final int currentQueueLength = waitingCount;
     final String statusString = currentQueueLength == 0 ? 'No waiting' : queue.waitStatus;
 
     // Map theme colors to match your view standards exactly
@@ -112,7 +128,7 @@ class SavedRestaurantsViewModel {
       badgeBgColor: badgeBgColor,
       badgeTextColor: Colors.white,
       businessStatusText: businessStateText,  
-      businessStatusColor: businessStateColor, 
+      businessStatusColor: businessStateColor,
     );
   }
 }
