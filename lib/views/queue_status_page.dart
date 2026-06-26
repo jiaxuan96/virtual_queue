@@ -228,14 +228,27 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
     return targetId; // 🧠 Dynamic safe fallback instead of hardcoded string overrides
   }
 
-  String _formatWaitTime(int peopleAhead) {
-    if (peopleAhead <= 0) return "Now Serving!";
-    int totalMinutes = peopleAhead * 10;
+  String _formatWaitTime(
+      int peopleAhead,
+      int estimatedTimePerTable,
+      int myTicketNumber,
+      int currentServing,
+      ) {
+    if (currentServing == myTicketNumber) {
+      return "Now Serving!";
+    }
+
+    if (peopleAhead <= 0) {
+      return "$estimatedTimePerTable minutes";
+    }
+
+    int totalMinutes = (peopleAhead + 1) * estimatedTimePerTable;
+
     if (totalMinutes < 60) {
       return "$totalMinutes minutes";
     } else {
-      int hours = totalMinutes ~/ 60; 
-      int minutes = totalMinutes % 60; 
+      int hours = totalMinutes ~/ 60;
+      int minutes = totalMinutes % 60;
       String hourLabel = hours == 1 ? "hour" : "hours";
       return minutes == 0 ? "$hours $hourLabel" : "$hours $hourLabel $minutes mins";
     }
@@ -527,8 +540,13 @@ class _QueueStatusPageState extends State<QueueStatusPage> {
                             
                             const SizedBox(height: 12),
                             _buildDetailsBentoNode(
-                              "ESTIMATED WAITING TIME", 
-                              _formatWaitTime(peopleAhead),
+                              "ESTIMATED WAITING TIME",
+                              _formatWaitTime(
+                                peopleAhead,
+                                state.restaurantData['estimated_time'] ?? 10,
+                                streamTicketNumber,
+                                currentServing,
+                              ),
                             ),
                           ],
                         ),

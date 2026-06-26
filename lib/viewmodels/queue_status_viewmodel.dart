@@ -223,10 +223,23 @@ class QueueStatusViewModel with ChangeNotifier {
                 .doc(restaurantId)
                 .get();
 
+            final myTicketNumber = shortcutData['ticket_number'] ?? 0;
+
+            final peopleAheadSnap = await _firestore
+                .collection('queues')
+                .doc(restaurantId)
+                .collection('tickets')
+                .where('status', isEqualTo: 'WAITING')
+                .where('queue_number', isLessThan: myTicketNumber)
+                .get();
+
+            final peopleAhead = peopleAheadSnap.docs.length;
+
             return QueueStatusState(
-              queueData: combinedQueueData, 
+              queueData: combinedQueueData,
               restaurantData: restSnap.data() as Map<String, dynamic>? ?? {},
               brandData: brandSnap.data() as Map<String, dynamic>? ?? {},
+              peopleAhead: peopleAhead,
             );
           });
         });

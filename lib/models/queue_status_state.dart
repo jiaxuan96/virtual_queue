@@ -33,24 +33,19 @@ class QueueStatusState {
   final Map<String, dynamic> queueData;
   final Map<String, dynamic> restaurantData;
   final Map<String, dynamic> brandData;
+  final int peopleAhead;
 
   QueueStatusState({
     required this.queueData,
     required this.restaurantData,
     required this.brandData,
+    required this.peopleAhead,
   });
 
-  // 🎯 FIX: Dynamically pass your ticket number to find your exact wait line placement
+  // Returns the real number of customers waiting before this user.
+  // The value is calculated in the ViewModel by counting WAITING tickets
   int calculatePeopleAhead(int myTicketNumber) {
-    final int currentServing = queueData['current_serving'] ?? 0;
-    
-    // If the restaurant hasn't started serving anyone yet, everyone with a number lower than you is ahead
-    if (currentServing == 0) {
-      return myTicketNumber > 0 ? myTicketNumber - 1 : 0;
-    }
-    
-    int gap = myTicketNumber - currentServing;
-    return gap < 0 ? 0 : gap;
+    return peopleAhead;
   }
 
   // 🎯 FIX: Bulletproof mathematical progress mapping for your circle progress indicator
