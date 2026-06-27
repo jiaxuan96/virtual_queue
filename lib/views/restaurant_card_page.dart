@@ -5,6 +5,7 @@ import '../viewmodels/restaurant_card_viewmodel.dart';
 import '../models/restaurant_detail_state.dart';
 import 'queue_status_page.dart';
 import '../services/queue_service.dart';
+import 'reservation_booking_page.dart';
 
 class RestaurantCardPage extends StatefulWidget {
   final String brandId;       
@@ -516,32 +517,48 @@ class _RestaurantCardPageState extends State<RestaurantCardPage> {
                                 ),
                                 
                                 const SizedBox(height: 16),
-                                
-                                Container(
-                                  width: double.infinity, 
+
+                                SizedBox(
+                                  width: double.infinity,
                                   height: 68,
-                                  decoration: BoxDecoration(
-                                    color: const Color(0xFFCBE7F5),
-                                    borderRadius: BorderRadius.circular(16),
-                                  ),
-                                  child: InkWell(
-                                    onTap: () {},
-                                    borderRadius: BorderRadius.circular(16),
-                                    child: const Row(
-                                      mainAxisAlignment: MainAxisAlignment.center,
-                                      children: [
-                                        Icon(Icons.calendar_today_outlined, color: Color(0xFF4E6874), size: 20),
-                                        SizedBox(width: 12),
-                                        Text(
-                                          'Book Table',
-                                          style: TextStyle(
-                                            fontFamily: 'Plus Jakarta Sans',
-                                            fontSize: 18,
-                                            fontWeight: FontWeight.w700,
-                                            color: Color(0xFF4E6874),
+                                  child: ElevatedButton.icon(
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: const Color(0xFFCBE7F5), // your existing color
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(16),
+                                      ),
+                                    ),
+
+                                    onPressed: () {
+                                      Navigator.push(
+                                        context,
+                                        MaterialPageRoute(
+                                          builder: (_) => ReservationBookingPage(
+                                            restaurantId: widget.restaurantId,
+                                            brandId: widget.brandId,
+                                            restaurantName: branchName.isNotEmpty
+                                                ? '$brandName - $branchName'
+                                                : brandName,
                                           ),
                                         ),
-                                      ],
+                                      );
+                                    },
+
+                                    icon: const Icon(
+                                      Icons.restaurant_menu_outlined,
+                                      color: Colors.black87,
+                                      size: 20,
+                                    ),
+
+                                    label: const Text(
+                                      'Book a Table',
+                                      style: TextStyle(
+                                        fontFamily: 'Plus Jakarta Sans',
+                                        fontSize: 18,
+                                        fontWeight: FontWeight.w700,
+                                        color: Colors.black87,
+                                      ),
                                     ),
                                   ),
                                 ),
