@@ -112,12 +112,6 @@ class _RestaurantReservationPageState extends State<RestaurantReservationPage>{
                               reservation.status == 'CANCELLED';
                         }).toList();
 
-                        if (activeReservations.isEmpty && historyReservations.isEmpty) {
-                          return const Center(
-                            child: Text('No reservations found.'),
-                          );
-                        }
-
                         return Column(
                           children: [
 
@@ -152,21 +146,36 @@ class _RestaurantReservationPageState extends State<RestaurantReservationPage>{
                             const SizedBox(height: 15),
 
                             Expanded(
-                              child: ListView.builder(
+                              child: selectedTab == 0
+                                  ? activeReservations.isEmpty
+                                  ? _buildEmptyReservationState(
+                                icon: Icons.event_busy_rounded,
+                                title: 'No Active Reservations',
+                                subtitle:
+                                'There are currently no pending or confirmed reservations.',
+                              )
+                                  : ListView.builder(
                                 padding: const EdgeInsets.all(16),
-
-                                itemCount: selectedTab == 0
-                                    ? activeReservations.length
-                                    : historyReservations.length,
-
+                                itemCount: activeReservations.length,
                                 itemBuilder: (context, index) {
-
-                                  final reservation = selectedTab == 0
-                                      ? activeReservations[index]
-                                      : historyReservations[index];
-
                                   return _buildReservationCard(
-                                    reservation,
+                                    activeReservations[index],
+                                  );
+                                },
+                              )
+                                  : historyReservations.isEmpty
+                                  ? _buildEmptyReservationState(
+                                icon: Icons.history_rounded,
+                                title: 'No Reservation History',
+                                subtitle:
+                                'Rejected and cancelled reservations will appear here.',
+                              )
+                                  : ListView.builder(
+                                padding: const EdgeInsets.all(16),
+                                itemCount: historyReservations.length,
+                                itemBuilder: (context, index) {
+                                  return _buildReservationCard(
+                                    historyReservations[index],
                                   );
                                 },
                               ),
@@ -231,6 +240,80 @@ class _RestaurantReservationPageState extends State<RestaurantReservationPage>{
                 );
               },
             ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildEmptyReservationState({
+    required IconData icon,
+    required String title,
+    required String subtitle,
+    String? buttonText,
+    VoidCallback? onPressed,
+  }) {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+
+            Icon(
+              icon,
+              size: 70,
+              color: const Color(0xFF006670),
+            ),
+
+            const SizedBox(height: 16),
+
+            Text(
+              title,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.w800,
+                color: Color(0xFF134E4A),
+              ),
+            ),
+
+            const SizedBox(height: 8),
+
+            Text(
+              subtitle,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontSize: 14,
+                color: Color(0xFF64748B),
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+
+            if (buttonText != null && onPressed != null) ...[
+              const SizedBox(height: 20),
+
+              SizedBox(
+                width: 180,
+                height: 45,
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF006670),
+                    foregroundColor: Colors.white,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(14),
+                    ),
+                  ),
+                  onPressed: onPressed,
+                  child: Text(
+                    buttonText,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ),
+            ],
           ],
         ),
       ),
@@ -655,7 +738,7 @@ class _RestaurantReservationPageState extends State<RestaurantReservationPage>{
     }
 
     if (reservation.status == 'CONFIRMED') {
-      statusColor = Colors.green;
+      statusColor = Color(0xFF006670);
     }
 
     if (reservation.status.contains('CANCELLED')) {
