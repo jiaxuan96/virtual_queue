@@ -4,6 +4,8 @@ import 'package:virtual_queue/views/restaurant_profile_page.dart';
 import 'package:virtual_queue/models/restaurant_brand_model.dart';
 import 'package:virtual_queue/models/restaurant_model.dart';
 import 'package:virtual_queue/viewmodels/restaurant_profile_viewmodel.dart';
+import '../models/reservation_model.dart';
+import '../viewmodels/reservation_viewmodel.dart';
 
 class RestaurantReservationPage extends StatefulWidget {
   final String restaurantId;
@@ -24,6 +26,9 @@ class RestaurantReservationPage extends StatefulWidget {
 class _RestaurantReservationPageState extends State<RestaurantReservationPage>{
 
   final viewmodel = RestaurantProfileViewModel();
+  final ReservationViewModel reservationViewModel = ReservationViewModel();
+  // bool _showActive = true;
+  int selectedTab = 0;
 
   late String selectedRestaurantId;
 
@@ -79,8 +84,96 @@ class _RestaurantReservationPageState extends State<RestaurantReservationPage>{
                       return _buildSetupRequiredMessage();
                     }
 
-                    return const Center(
-                      child: Text('Reservation page coming soon'),
+                    return StreamBuilder<List<ReservationModel>>(
+                      stream: reservationViewModel
+                          .watchRestaurantReservations(
+                        selectedRestaurantId,
+                      ),
+                      builder: (context, reservationSnapshot) {
+
+                        if (!reservationSnapshot.hasData) {
+                          return const Center(
+                            child: CircularProgressIndicator(),
+                          );
+                        }
+
+                        final reservations =
+                        reservationSnapshot.data!;
+
+                        final now = DateTime.now();
+                        
+                        final activeReservations = reservations.where((reservation) {
+                          return reservation.status == 'PENDING' ||
+                              reservation.status == 'CONFIRMED';
+                        }).toList();
+
+                        final historyReservations = reservations.where((reservation) {
+                          return reservation.status == 'REJECTED' ||
+                              reservation.status == 'CANCELLED';
+                        }).toList();
+
+                        if (activeReservations.isEmpty && historyReservations.isEmpty) {
+                          return const Center(
+                            child: Text('No reservations found.'),
+                          );
+                        }
+
+                        return Column(
+                          children: [
+
+                            const SizedBox(height: 15),
+
+                            Row(
+                              mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                              children: [
+
+                                _buildTabButton(
+                                  title: "Active",
+                                  selected: selectedTab == 0,
+                                  onTap: () {
+                                    setState(() {
+                                      selectedTab = 0;
+                                    });
+                                  },
+                                ),
+
+                                _buildTabButton(
+                                  title: "History",
+                                  selected: selectedTab == 1,
+                                  onTap: () {
+                                    setState(() {
+                                      selectedTab = 1;
+                                    });
+                                  },
+                                ),
+                              ],
+                            ),
+
+                            const SizedBox(height: 15),
+
+                            Expanded(
+                              child: ListView.builder(
+                                padding: const EdgeInsets.all(16),
+
+                                itemCount: selectedTab == 0
+                                    ? activeReservations.length
+                                    : historyReservations.length,
+
+                                itemBuilder: (context, index) {
+
+                                  final reservation = selectedTab == 0
+                                      ? activeReservations[index]
+                                      : historyReservations[index];
+
+                                  return _buildReservationCard(
+                                    reservation,
+                                  );
+                                },
+                              ),
+                            ),
+                          ],
+                        );
+                      },
                     );
                   },
                 );
@@ -453,4 +546,267 @@ class _RestaurantReservationPageState extends State<RestaurantReservationPage>{
     );
   }
 
+  Widget _buildInfoRow({
+    required IconData icon,
+    required String title,
+    required String value,
+  }) {
+    return Padding(
+      padding: const EdgeInsets.only(bottom: 10),
+      child: Row(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+
+          Icon(
+            icon,
+            color: const Color(0xFF006670),
+            size: 22,
+          ),
+
+          const SizedBox(width: 12),
+
+          Expanded(
+            child: RichText(
+              text: TextSpan(
+                style: const TextStyle(
+                  fontFamily: 'Plus Jakarta Sans',
+                  color: Colors.black,
+                  fontSize: 17,
+                ),
+                children: [
+                  TextSpan(
+                    text: '$title: ',
+                    style: const TextStyle(
+                      fontWeight: FontWeight.bold,
+                      fontSize: 17,
+                      color: Color(0xFF48626E),
+                    ),
+                  ),
+                  TextSpan(
+                    text: value,
+                    style: const TextStyle(
+                      fontWeight: FontWeight.w500,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton({
+    required String title,
+    required bool selected,
+    required VoidCallback onTap,
+  }) {
+    return InkWell(
+      onTap: onTap,
+      borderRadius: BorderRadius.circular(8),
+      child: Padding(
+        padding: const EdgeInsets.symmetric(
+          horizontal: 8,
+          vertical: 6,
+        ),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+
+            Text(
+              title,
+              style: TextStyle(
+                fontSize: 17,
+                fontWeight: FontWeight.bold,
+                color: selected
+                    ? const Color(0xFF006670)
+                    : const Color(0xFF64748B),
+              ),
+            ),
+
+            const SizedBox(height: 6),
+
+            AnimatedContainer(
+              duration: const Duration(milliseconds: 250),
+              height: 3,
+              width: 55,
+              decoration: BoxDecoration(
+                color: selected
+                    ? const Color(0xFF006670)
+                    : Colors.transparent,
+                borderRadius: BorderRadius.circular(10),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildReservationCard(
+      ReservationModel reservation,
+      ) {
+
+    Color statusColor = Colors.grey;
+
+    if (reservation.status == 'PENDING') {
+      statusColor = Colors.orange;
+    }
+
+    if (reservation.status == 'CONFIRMED') {
+      statusColor = Colors.green;
+    }
+
+    if (reservation.status.contains('CANCELLED')) {
+      statusColor = Colors.red;
+    }
+
+    return Container(
+      margin: const EdgeInsets.only(bottom: 18),
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFFF0F4F5),
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(
+          color: const Color(0xFFE5E7EB),
+        ),
+        boxShadow: [
+          BoxShadow(
+            color: Colors.black.withValues(alpha: 0.06),
+            blurRadius: 8,
+            offset: const Offset(0, 3),
+          ),
+        ],
+      ),
+
+      child: Padding(
+        padding: const EdgeInsets.all(16),
+
+        child: Column(
+          crossAxisAlignment:
+          CrossAxisAlignment.start,
+
+          children: [
+
+            Row(
+              children: [
+
+                Expanded(
+                  child: Text(
+                    reservation.customerName,
+                    style: const TextStyle(
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF006670),
+                    ),
+                  ),
+                ),
+
+                Container(
+                  padding: const EdgeInsets.symmetric(
+                    horizontal: 12,
+                    vertical: 6,
+                  ),
+                  decoration: BoxDecoration(
+                    color: statusColor,
+                    borderRadius: BorderRadius.circular(20),
+                  ),
+                  child: Text(
+                    reservation.status,
+                    style: const TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                      fontSize: 12,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+
+            const SizedBox(height: 20),
+
+            _buildInfoRow(
+              icon: Icons.groups_outlined,
+              title: 'No. of Pax',
+              value: reservation.pax.toString(),
+            ),
+
+            _buildInfoRow(
+              icon: Icons.calendar_today_outlined,
+              title: 'Date',
+              value:
+              '${reservation.reservationDateTime.day}/${reservation.reservationDateTime.month}/${reservation.reservationDateTime.year}',
+            ),
+
+            _buildInfoRow(
+              icon: Icons.access_time_outlined,
+              title: 'Time',
+              value:
+              '${reservation.reservationDateTime.hour}:${reservation.reservationDateTime.minute.toString().padLeft(2, '0')}',
+            ),
+
+            if (reservation.status == 'PENDING') ...[
+              const SizedBox(height: 16),
+              Row(
+                children: [
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFF006670),
+                        foregroundColor: Colors.white,
+                      ),
+                      onPressed: () async {
+                        await reservationViewModel.approveReservation(
+                          reservation.reservationId,
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.check_circle_outline,
+                        size: 20,
+                        color: Colors.white,
+                      ),
+                      label: const Text(
+                        'Approve',
+                        style: TextStyle(
+                          color: Colors.white,
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+
+                  const SizedBox(width: 10),
+
+                  Expanded(
+                    child: ElevatedButton.icon(
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: const Color(0xFFFFF1F2),
+                        foregroundColor: Colors.redAccent,
+                      ),
+                      onPressed: () async {
+                        await reservationViewModel.rejectReservation(
+                          reservation.reservationId,
+                        );
+                      },
+                      icon: const Icon(
+                        Icons.close_rounded,
+                        size: 20,
+                      ),
+                      label: const Text(
+                        'Reject',
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                        ),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ],
+          ],
+        ),
+      ),
+    );
+  }
 }
