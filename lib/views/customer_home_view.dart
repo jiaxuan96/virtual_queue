@@ -4,6 +4,7 @@ import '../viewmodels/customer_home_viewmodel.dart';
 import 'restaurant_card_page.dart'; 
 import 'queue_status_page.dart'; 
 import 'user_profile_view.dart';
+import 'customer_reservation_page.dart';
 
 class CustomerHomeView extends StatefulWidget {
   const CustomerHomeView({super.key});
@@ -38,7 +39,7 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
       _buildQueueTabContent(),
       // const QueueStatusPage(),
           
-      const Center(child: Text('Reservations Page Coming Soon')),
+      const CustomerReservationPage(),
       const UserProfileView(),
     ];
 
