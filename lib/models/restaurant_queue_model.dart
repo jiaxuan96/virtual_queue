@@ -33,28 +33,33 @@ class RestaurantQueueModel {
   final String restaurantId;  
   final int currentServing;
   final int nextAvailableNumber;
+  final int waitingCount;
 
   RestaurantQueueModel({
     required this.brandId,
     required this.restaurantId,
     required this.currentServing,
     required this.nextAvailableNumber,
+    required this.waitingCount,
   });
 
-  factory RestaurantQueueModel.fromMap(Map<String, dynamic> data, String docId) {
+  factory RestaurantQueueModel.fromMap(
+    Map<String, dynamic> data,
+    String docId, {
+    int waitingCount = 0,
+  }) {
     return RestaurantQueueModel(
-      // Looks for fields in the map; falls back to using the Firestore document ID for restaurantId if field is omitted
       brandId: data['brand_id'] ?? data['brandId'] ?? '',
-      restaurantId: data['restaurant_id'] ?? data['restaurantId'] ?? docId,
+      restaurantId:
+      data['restaurant_id'] ?? data['restaurantId'] ?? docId,
       currentServing: data['current_serving'] ?? 0,
-      nextAvailableNumber: data['next_available_number'] ?? 0,
+      nextAvailableNumber: data['next_available_number'] ?? 1,
+      waitingCount: waitingCount,
     );
   }
 
-  int get queueLength {
-    final length = nextAvailableNumber - currentServing - 1;
-    return length > 0 ? length : 0;
-  }
+  // Returns the actual number of tickets whose status is WAITING.
+  int get queueLength => waitingCount;
 
   String get waitStatus {
     if (queueLength == 0) return 'No Waiting';

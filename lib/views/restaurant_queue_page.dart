@@ -90,6 +90,8 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                           stream: viewmodel.watchWaitingTicketCount(selectedRestaurantId),
                           builder: (context, waitingSnapshot){
                             final waitingCount = waitingSnapshot.data ?? 0;
+                            final statusString = viewmodel.getWaitStatus(waitingCount);
+                            final badgeBgColor = viewmodel.getWaitStatusColor(waitingCount);
                             final hasWaitingCustomer = waitingCount > 0;
                             final servedCustomer = hasCurrentCustomer && !hasWaitingCustomer;
                             final callButtonText = hasWaitingCustomer
@@ -256,11 +258,11 @@ class _RestaurantQueuePageState extends State<RestaurantQueuePage> {
                                         Container(
                                           padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 6),
                                           decoration: BoxDecoration(
-                                            color: const Color(0xFFF39850),
+                                            color: badgeBgColor,
                                             borderRadius: BorderRadius.circular(20),
                                           ),
                                           child: Text(
-                                            queue.waitStatus,
+                                            statusString,
                                             style: const TextStyle(
                                               color: Colors.white,
                                               fontWeight: FontWeight.bold,

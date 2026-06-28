@@ -47,6 +47,8 @@ class _CustomerHomeViewState extends State<CustomerHomeView> {
       backgroundColor: const Color(0xFFF6FAFB),
       
       body: SafeArea(
+        // Disable the top SafeArea for the Reservations tab (index 2)
+        top: _currentIndex != 2,
         bottom: false,
         child: IndexedStack(
           index: _currentIndex,

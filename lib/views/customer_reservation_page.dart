@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:virtual_queue/views/customer_home_view.dart';
-
+import 'package:flutter/services.dart';
 import '../models/reservation_model.dart';
 import '../viewmodels/reservation_viewmodel.dart';
 
@@ -31,6 +31,11 @@ class _CustomerReservationPageState
         ),
         backgroundColor: const Color(0xFF115E59),
         foregroundColor: Colors.white,
+        systemOverlayStyle: const SystemUiOverlayStyle(
+          statusBarColor: Color(0xFF115E59),
+          statusBarIconBrightness: Brightness.light,
+          statusBarBrightness: Brightness.dark,
+        ),
       ),
 
       body: Column(

@@ -108,7 +108,18 @@ class SavedRestaurantsViewModel {
   ) {
     // Safely parse out standard data state sizes
     final int currentQueueLength = waitingCount;
-    final String statusString = currentQueueLength == 0 ? 'No waiting' : queue.waitStatus;
+
+    String statusString;
+
+    if (currentQueueLength == 0) {
+      statusString = 'No waiting';
+    } else if (currentQueueLength <= 5) {
+      statusString = 'Short Wait';
+    } else if (currentQueueLength <= 10) {
+      statusString = 'Moderate';
+    } else {
+      statusString = 'Busy';
+    }
 
     // Map theme colors to match your view standards exactly
     Color badgeBgColor = const Color(0xFF008645); // Deep green

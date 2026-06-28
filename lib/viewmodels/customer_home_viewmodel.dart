@@ -139,7 +139,17 @@ class CustomerHomeViewModel {
     int waitingCount,
   ) {
     final int currentQueueLength = waitingCount;
-    final String statusString = currentQueueLength == 0 ? 'No waiting' : queue.waitStatus;
+    String statusString;
+
+    if (currentQueueLength == 0) {
+      statusString = 'No waiting';
+    } else if (currentQueueLength <= 5) {
+      statusString = 'Short Wait';
+    } else if (currentQueueLength <= 10) {
+      statusString = 'Moderate';
+    } else {
+      statusString = 'Busy';
+    }
 
     Color badgeBgColor = const Color(0xFF008645); 
     if (statusString == 'Short Wait') badgeBgColor = const Color(0xFFF39850); 

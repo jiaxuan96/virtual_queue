@@ -108,4 +108,36 @@ class RestaurantQueueViewmodel extends ChangeNotifier{
       restaurantId
     );
   }
+
+  String getWaitStatus(int waitingCount) {
+    if (waitingCount == 0) {
+      return 'No waiting';
+    }
+
+    if (waitingCount <= 5) {
+      return 'Short Wait';
+    }
+
+    if (waitingCount <= 10) {
+      return 'Moderate';
+    }
+
+    return 'Busy';
+  }
+
+  Color getWaitStatusColor(int waitingCount) {
+    if (waitingCount == 0) {
+      return const Color(0xFF008645);
+    }
+
+    if (waitingCount <= 5) {
+      return const Color(0xFFF39850);
+    }
+
+    if (waitingCount <= 10) {
+      return const Color(0xFFFF7890);
+    }
+
+    return const Color(0xFFBA1A1A);
+  }
 }
