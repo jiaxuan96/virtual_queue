@@ -51,4 +51,21 @@ class LoginViewModel extends ChangeNotifier{
       notifyListeners();
     }
   }
+
+  Future<bool> resetPassword(String email) async {
+    if (email.trim().isEmpty) {
+      errorMessage = 'Please enter your email first';
+      notifyListeners();
+      return false;
+    }
+
+    try {
+      await _authService.sendPasswordResetEmail(email);
+      return true;
+    } catch (e) {
+      errorMessage = 'Failed to send password reset email';
+      notifyListeners();
+      return false;
+    }
+  }
 }

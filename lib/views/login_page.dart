@@ -285,7 +285,30 @@ class _LoginPageState  extends State<LoginPage>{
                             ),
                           ),
                         ),
-                        SizedBox(height:30),
+                        SizedBox(height:5),
+                        Center(
+                          child: TextButton(
+                            onPressed: () async {
+                              final success = await viewModel.resetPassword(
+                                emailController.text.trim(),
+                              );
+
+                              if (!mounted) return;
+
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    success
+                                        ? 'Password reset email sent'
+                                        : viewModel.errorMessage ?? 'Failed to send reset email',
+                                  ),
+                                ),
+                              );
+                            },
+                            child: const Text('Forgot Password?'),
+                          ),
+                        ),
+                        SizedBox(height:20),
                       ],
                     )
                   ),

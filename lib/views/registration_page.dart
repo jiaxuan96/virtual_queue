@@ -14,7 +14,7 @@ class _RegistrationPageState extends State<RegistrationPage> {
   @override
   Widget build(BuildContext context) {
     return DefaultTabController(
-      length: 2,
+      length: 2, // 2 tabs
       child: Scaffold(
         backgroundColor: Color(0xFFF6FAFB),
         body: Container(
